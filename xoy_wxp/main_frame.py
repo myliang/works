@@ -2,6 +2,10 @@
 # coding = utf-8
 
 import wx
+import os
+
+def getImagePath(filename):
+  os.path.join(os.getcwd(), "icons", filename)
 
 class MainFrame(wx.Frame):
   def __init__(self, parent, title):
