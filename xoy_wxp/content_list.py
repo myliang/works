@@ -9,21 +9,15 @@ import wx.grid
 class ContentList(wx.ListCtrl):
   def __init__(self, parent):
     wx.ListCtrl.__init__(self, parent, -1, style = wx.LC_REPORT | wx.LC_NO_HEADER, size = (500, 500))
-    self.InsertColumn(0, "index")
+    self.InsertColumn(0, "state")
     self.InsertColumn(1, "filename")
     self.InsertColumn(2, "processing")
     self.InsertColumn(3, "spead")
 
-    self.SetColumnWidth(0, 20)
-    self.SetColumnWidth(1, 320)
+    self.SetColumnWidth(0, 40)
+    self.SetColumnWidth(1, 300)
     self.SetColumnWidth(2, 80)
     self.SetColumnWidth(3, 80)
-
-    self.Append([0, "Dirt", 80, 100])
-    self.Append([1, "Dirt", 80, 100])
-    self.Append([2, "Dirt", 80, 100])
-    self.Append([3, "Dirt", 80, 100])
-    self.Append([4, "Dirt", 80, 100])
 
     # bind event
     self.Bind(wx.EVT_LIST_ITEM_RIGHT_CLICK, self.onPopupMenu)

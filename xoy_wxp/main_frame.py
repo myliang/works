@@ -7,6 +7,7 @@ import sys
 
 import new_frame
 import content_list
+import task
 
 # Action Bar Icons/holo_light/01_core_new/drawable-mdpi
 # Action Bar Icons/holo_light/09_media_pause/drawable-mdpi
@@ -16,7 +17,6 @@ def getImagePath(filename):
   return os.path.join(os.getcwd(), "icons/holo_light", filename)
 
 def getBitmapImage(filename):
-  print getImagePath(filename)
   return wx.Bitmap(getImagePath(filename))
 
 class MainFrame(wx.Frame):
@@ -36,12 +36,15 @@ class MainFrame(wx.Frame):
     self.Bind(wx.EVT_TOOL, self.onStop, toolStop)
 
     # self.SetMenuBar(menuBar)
-    panel = wx.Panel(self)
-    content_list.ContentList(panel)
+    self.panel = wx.Panel(self)
+    self.cl = content_list.ContentList(self.panel)
     self.Show(True)
 
   def onNew(self, event):
-    new_frame.NewFrame(self, "new")
+    dlg = new_frame.NewFrame(self, "new")
+    for value in dlg.values:
+      self.cl.Append(task.Task(value, 100).toAry())
+    dlg.Destroy()
 
   def onStart(self, event):
     print "start"
