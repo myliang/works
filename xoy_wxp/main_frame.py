@@ -25,32 +25,51 @@ class MainFrame(wx.Frame):
     toolBar = self.CreateToolBar()
 
     # new, start, stop, delete, setting
-    toolNew = toolBar.AddLabelTool(wx.ID_ANY, 'new', getBitmapImage("09_media_add_to_queue/drawable-mdpi/ic_action_add_to_queue.png"))
-    toolStart = toolBar.AddLabelTool(wx.ID_ANY, 'start', getBitmapImage("09_media_play/drawable-mdpi/ic_action_play.png"))
-    toolStop = toolBar.AddLabelTool(wx.ID_ANY, 'stop', getBitmapImage("09_media_pause/drawable-mdpi/ic_action_pause.png"))
+    toolNew = toolBar.AddLabelTool(wx.ID_ANY, 'new',
+        getBitmapImage("09_media_add_to_queue/drawable-mdpi/ic_action_add_to_queue.png"))
+    toolStart = toolBar.AddLabelTool(wx.ID_ANY, 'start',
+        getBitmapImage("09_media_play/drawable-mdpi/ic_action_play.png"))
+    toolStop = toolBar.AddLabelTool(wx.ID_ANY, 'stop',
+        getBitmapImage("09_media_pause/drawable-mdpi/ic_action_pause.png"))
+    toolRemove = toolBar.AddLabelTool(wx.ID_ANY, 'remove',
+        getBitmapImage("01_core_remove/drawable-mdpi/ic_action_remove.png"))
     toolBar.Realize()
 
     # bind event
     self.Bind(wx.EVT_TOOL, self.onNew, toolNew)
     self.Bind(wx.EVT_TOOL, self.onStart, toolStart)
     self.Bind(wx.EVT_TOOL, self.onStop, toolStop)
+    self.Bind(wx.EVT_TOOL, self.onRemove, toolRemove)
+
+    # menu bar
+    # menuBar = wx.MenuBar()
+    # m1 = wx.Menu()
+    # m1.Append(wx.NewId(), "&copy", "")
+    # menuBar.Append(m1, "&file")
+    # self.SetMenuBar(menuBar)
+
 
     # self.SetMenuBar(menuBar)
     self.panel = wx.Panel(self)
     self.cl = content_list.ContentList(self.panel)
+    # choice
+    # wx.Choice(self, -1, pos = (380, 0), choices = ["processing", "finished", "delete"])
     self.Show(True)
 
   def onNew(self, event):
     dlg = new_frame.NewFrame(self, "new")
     for value in dlg.values:
-      self.cl.Append(task.Task(value, 100).toAry())
+      self.cl.Append(task.Task(value, 100))
     dlg.Destroy()
 
   def onStart(self, event):
-    print "start"
+    self.cl.onStart(event)
 
   def onStop(self, event):
-    print "stop"
+    self.cl.onStop(event)
+
+  def onRemove(self, event):
+    self.cl.onDelete(event)
 
 if __name__ == '__main__':
   app = wx.App(False)
