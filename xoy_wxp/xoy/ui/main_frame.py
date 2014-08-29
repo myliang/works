@@ -1,17 +1,16 @@
 #!/bin/python
 # coding = utf-8
 
-import wx
 import os
-import sys
-
+import wx
 import new_frame
-import content_list
-import task
 
 # Action Bar Icons/holo_light/01_core_new/drawable-mdpi
 # Action Bar Icons/holo_light/09_media_pause/drawable-mdpi
 # Action Bar Icons/holo_light/09_media_play/drawable-mdpi
+import task
+import content_list
+
 
 def getImagePath(filename):
   return os.path.join(os.getcwd(), "icons/holo_light", filename)
@@ -71,7 +70,4 @@ class MainFrame(wx.Frame):
   def onRemove(self, event):
     self.cl.onDelete(event)
 
-if __name__ == '__main__':
-  app = wx.App(False)
-  frame = MainFrame(None, "xoy")
-  app.MainLoop()
+

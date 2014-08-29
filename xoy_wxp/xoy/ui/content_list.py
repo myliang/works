@@ -4,9 +4,9 @@
 import wx
 import wx.grid
 
+# GRID_COLUMNS=["fileName", "processing", "spead"]
 import task
 
-# GRID_COLUMNS=["fileName", "processing", "spead"]
 
 class ContentList(wx.ListCtrl):
   def __init__(self, parent):

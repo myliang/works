@@ -26,7 +26,7 @@ def nextWaitTaskToStart():
       task.start()
     elif task.isFinished():
       all_task_list[i].finished()
-    i =+ 1
+    i += 1
 
 # convert state to start from wait
 def convertStateToStartFromWait():
@@ -82,7 +82,7 @@ class Task(threading.Thread):
       # super(Task, self).start()
 
   def wait(self):
-    if isStop():
+    if self.isStop():
       self.state = 2
 
   def delete(self):

@@ -2,8 +2,6 @@
 # coding = utf-8
 
 import wx
-import os
-import sys
 
 class NewFrame(wx.Dialog):
   def __init__(self, parent, title):
