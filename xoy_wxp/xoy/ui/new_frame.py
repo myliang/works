@@ -5,7 +5,7 @@ import wx
 
 class NewFrame(wx.Dialog):
   def __init__(self, parent, title):
-    wx.Dialog.__init__(self, parent, title = title, size = (500, 200),
+    wx.Dialog.__init__(self, parent, title = title, size = (500, 220),
         style = wx.DEFAULT_DIALOG_STYLE)
     self.address = wx.TextCtrl(self, -1, "url address", pos = (20, 10), size = (460, 120), style = wx.TE_MULTILINE)
     btnOk = wx.Button(self, label = "ok", pos = (20, 150))
@@ -14,6 +14,7 @@ class NewFrame(wx.Dialog):
     self.Bind(wx.EVT_BUTTON, self.onBtnOk, btnOk)
     self.Bind(wx.EVT_BUTTON, self.onBtnOpen, btnOpen)
 
+    self.values = []
     self.ShowModal()
 
   def onBtnOk(self, event):

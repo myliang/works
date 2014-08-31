@@ -20,13 +20,13 @@ def nextWaitTaskToStart():
   if isOverMaxLimit():
     return
 
-  i = 0
+  # i = 0
   for task in all_task_list:
     if task.isWait():
       task.start()
-    elif task.isFinished():
-      all_task_list[i].finished()
-    i += 1
+    # elif task.isFinished():
+    #   all_task_list[i].finished()
+    # i += 1
 
 # convert state to start from wait
 def convertStateToStartFromWait():
