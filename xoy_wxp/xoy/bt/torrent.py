@@ -4,6 +4,9 @@
 import sys
 import hashlib
 
+reload(sys)
+sys.setdefaultencoding('utf8')
+
 def toTorrentFromFile(filename):
   return Torrent(toBEncodeFromFile(filename))
 
@@ -23,26 +26,39 @@ def toBEncodeFromFile(filename):
 class Torrent:
   def __init__(self, bencode):
     d = bencode.parse()
-    self.comment = d['comment'].decode('utf-8')
+    self.comment = d['comment']
     self.creation_date = d['creation date']
-    self.created_by = d['created by'].decode('utf-8')
-    self.encoding = d['encoding'].decode('utf-8')
+    self.created_by = d['created by']
+    self.encoding = d['encoding']
 
     self.announces = []
     if d['announce-list']:
       for v in d['announce-list']:
         self.announces.append(v[0])
     else:
-      self.announces.append(d['announce'].decode('utf-8'))
+      self.announces.append(d['announce'])
 
     # info hash
     self.info_hash = hashlib.sha1(bencode.info).hexdigest()
     self.name = d['info']['name']
-    self.pieces = d['info']['pieces']
     self.piece_length = d['info']['piece length']
-    self.files = d['info']['files']
-    print self.files
+    self.pieces = d['info']['pieces']
+    self.files = []
 
+    for f in d['info']['files']:
+      self.files.append(TorrentFile(f['path'][0], f['length']))
+
+
+    print ','.join(['%s:%s\n' % item for item in self.__dict__.items() if item != 'pieces'])
+
+  def piecesLen(self):
+    return len(self.pieces)/20 + 1
+
+
+class TorrentFile:
+  def __init__(self, path, length):
+    self.path = path
+    self.length = length
 
 # class bencode
 class BEncode:
@@ -113,4 +129,4 @@ class BEncode:
 
 
 if __name__ == '__main__':
-  toTorrentFromFile(sys.argv[1])
+  print toTorrentFromFile(sys.argv[1]).piecesLen()
