@@ -7,11 +7,11 @@ import hashlib
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-def toTorrentFromFile(filename):
-  return Torrent(toBEncodeFromFile(filename))
+def to_torrent_from_file(filename):
+  return Torrent(to_bencode_from_file(filename))
 
 # convert data to becode from file
-def toBEncodeFromFile(filename):
+def to_bencode_from_file(filename):
   f = None
   try:
     f = open(filename, 'rb')
@@ -29,7 +29,7 @@ class Torrent:
     self.comment = d['comment']
     self.creation_date = d['creation date']
     self.created_by = d['created by']
-    self.encoding = d['encoding']
+    self.encoding = d.get('encoding')
 
     self.announces = []
     if d['announce-list']:
@@ -46,19 +46,26 @@ class Torrent:
     self.files = []
 
     for f in d['info']['files']:
-      self.files.append(TorrentFile(f['path'][0], f['length']))
+      self.files.append(TorrentFile('/'.join(f['path']), f['length']))
 
 
-    print ','.join(['%s:%s\n' % item for item in self.__dict__.items() if item != 'pieces'])
+  def __repr__(self):
+    return ''.join(['%s:%s\n' % item for item in self.__dict__.items() if item[0] != "pieces" ])
 
-  def piecesLen(self):
+  def pieces_len(self):
     return len(self.pieces)/20 + 1
 
 
 class TorrentFile:
+
   def __init__(self, path, length):
     self.path = path
     self.length = length
+
+  #def __str__(self):
+  #  return ''.join(["%s:%s\n" % item for item in self.__dict__.items()])
+  def __repr__(self):
+    return ''.join(["%s:%s\n" % item for item in self.__dict__.items()])
 
 # class bencode
 class BEncode:
@@ -68,65 +75,67 @@ class BEncode:
     self.index = 0
 
   def parse(self):
-    v = self.indexValue()
+    v = self.index_value()
     if v == 'd':
-      return self.parseDict()
+      return self.parse_dict()
     elif v == 'l':
-      return self.parseList()
+      return self.parse_list()
     elif v == 'i':
-      return self.parseInt()
+      return self.parse_int()
     else:
-      return self.parseString()
+      return self.parse_string()
 
 
-  def parseDict(self):
+  def parse_dict(self):
     kv = {}
-    self.indexInc()
-    while 'e' != self.indexValue():
-      key = self.parseString()
+    self.index_inc()
+    while 'e' != self.index_value():
+      key = self.parse_string()
       begin = self.index
       value = self.parse()
       if 'info' == key:
         self.info = self.value[begin:self.index]
 
       kv[key] = value
-    self.indexInc()
+    self.index_inc()
     return kv
 
-  def parseList(self):
+  def parse_list(self):
     v = []
-    self.indexInc()
-    while 'e' != self.indexValue():
+    self.index_inc()
+    while 'e' != self.index_value():
       v.append(self.parse())
-    self.indexInc()
+    self.index_inc()
     return v
 
-  def parseString(self):
-    length = self.readInt()
-    self.indexInc()
+  def parse_string(self):
+    length = self.read_int()
+    self.index_inc()
     begin = self.index
     self.index += length
     return self.value[begin:self.index]
 
-  def parseInt(self):
-    self.indexInc()
-    v = self.readInt()
-    self.indexInc()
+  def parse_int(self):
+    self.index_inc()
+    v = self.read_int()
+    self.index_inc()
     return v
 
-  def indexValue(self):
+  def index_value(self):
     return self.value[self.index]
 
-  def indexInc(self):
+  def index_inc(self):
     self.index += 1
 
-  def readInt(self):
+  def read_int(self):
     v = 0
-    while self.indexValue().isdigit():
-      v = v * 10 + int(self.indexValue())
-      self.indexInc()
+    while self.index_value().isdigit():
+      v = v * 10 + int(self.index_value())
+      self.index_inc()
     return v
 
 
 if __name__ == '__main__':
-  print toTorrentFromFile(sys.argv[1]).piecesLen()
+  torrent = to_torrent_from_file(sys.argv[1])
+  print torrent
+  print torrent.pieces_len()
