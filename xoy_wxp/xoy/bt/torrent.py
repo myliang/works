@@ -7,9 +7,6 @@ import hashlib
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-def to_torrent_from_file(filename):
-  return Torrent(to_bencode_from_file(filename))
-
 # convert data to becode from file
 def to_bencode_from_file(filename):
   f = None
@@ -24,7 +21,8 @@ def to_bencode_from_file(filename):
 
 # class torrent
 class Torrent:
-  def __init__(self, bencode):
+  def __init__(self, filename):
+    bencode = to_bencode_from_file(filename)
     d = bencode.parse()
     self.comment = d['comment']
     self.creation_date = d['creation date']
@@ -52,8 +50,12 @@ class Torrent:
   def __repr__(self):
     return ''.join(['%s:%s\n' % item for item in self.__dict__.items() if item[0] != "pieces" ])
 
-  def pieces_len(self):
-    return len(self.pieces)/20 + 1
+  def blocks(self):
+    pl = len(self.pieces)
+    length = pl/20
+    if pl % 20:
+      length += 1
+    return length
 
 
 class TorrentFile:
@@ -136,6 +138,6 @@ class BEncode:
 
 
 if __name__ == '__main__':
-  torrent = to_torrent_from_file(sys.argv[1])
+  torrent = Torrent(sys.argv[1])
   print torrent
   print torrent.pieces_len()
