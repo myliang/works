@@ -76,7 +76,7 @@ def __request_cancel(fv, index, begin, length):
   byteary[13:17] = int2bytes4(length)
   return byteary
 
-def __byte_array(fv)
+def __byte_array(fv):
   byteary = bytearray(5)
   byteary[3] = 0x01
   byteary[4] = fv
