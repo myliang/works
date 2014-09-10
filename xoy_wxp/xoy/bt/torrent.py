@@ -4,20 +4,25 @@
 import sys
 import hashlib
 
+from bitmap import Bitmap
+
 reload(sys)
 sys.setdefaultencoding('utf8')
 
 # convert data to becode from file
 def to_bencode_from_file(filename):
-  f = None
-  try:
-    f = open(filename, 'rb')
-    read_bytes = f.read()
-    return BEncode(read_bytes)
-  finally:
-    if f:
-      f.close()
+  with open(filename, 'rb') as f:
+    return BEncode(f.read())
   return None
+  # f = None
+  # try:
+  #   f = open(filename, 'rb')
+  #   read_bytes = f.read()
+  #   return BEncode(read_bytes)
+  # finally:
+  #   if f:
+  #     f.close()
+  # return None
 
 # class torrent
 class Torrent:
@@ -37,7 +42,7 @@ class Torrent:
       self.announces.append(d['announce'])
 
     # info hash
-    self.info_hash = hashlib.sha1(bencode.info).hexdigest()
+    self.info_hash = hashlib.sha1(bencode.info).digest()
     self.name = d['info']['name']
     self.piece_length = d['info']['piece length']
     self.pieces = d['info']['pieces']
@@ -46,11 +51,13 @@ class Torrent:
     for f in d['info']['files']:
       self.files.append(TorrentFile('/'.join(f['path']), f['length']))
 
+    # bitfield init
+    self.bitfield = Bitmap(self.blocks_len())
 
   def __repr__(self):
     return ''.join(['%s:%s\n' % item for item in self.__dict__.items() if item[0] != "pieces" ])
 
-  def blocks(self):
+  def blocks_len(self):
     pl = len(self.pieces)
     length = pl/20
     if pl % 20:
@@ -140,4 +147,4 @@ class BEncode:
 if __name__ == '__main__':
   torrent = Torrent(sys.argv[1])
   print torrent
-  print torrent.pieces_len()
+  print torrent.blocks_len()

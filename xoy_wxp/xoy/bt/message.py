@@ -2,16 +2,13 @@
 # coding = utf-8
 
 import socket
+from xoy import byte_helper
 
 # creat tcp connect
 def tcp_connect(ip, port):
   sockfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   sockfd.connect(ip, port)
   return sockfd
-
-# to bytes 4 from int
-def int2bytes4(iv):
-  return [(iv >> 24) & 0xff, (iv >> 16) & 0xff, (iv >> 8) & 0xff, iv & 0xff]
 
 def hand_shake(info_hash, peer_id ):
   byteary = bytearray(68)
@@ -40,7 +37,7 @@ def have(index):
   byteary = bytearray(9)
   byteary[3] = 0x05
   byteary[4] = 0x04
-  byteary[5:] = int2bytes4(index)
+  byteary[5:] = byte_helper.int2bytes4(index)
   return byteary
 
 def bitfield(bitmap, peer):

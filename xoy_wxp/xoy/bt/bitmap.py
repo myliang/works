@@ -14,16 +14,16 @@ def byte_bit_index(index):
 
 
 class Bitmap:
-  def __init__(self, field_len, bitfile):
+  def __init__(self, field_len):
     self.field_len = field_len
     self.field = bytearray(self.field_len)
-    self.f = bitfile
-    if bitfile and os.path.exists(bitfile):
-      self.__open_file('rb', self.__read_file)
+    # self.f = bitfile
+    # if bitfile and os.path.exists(bitfile):
+    #   self.__open_file('rb', self.__read_file)
 
-  def store(self):
-    if self.f and os.path.exists(self.f):
-      self.__open_file('wb', self.__write_file)
+  # def store(self):
+  #   if self.f and os.path.exists(self.f):
+  #     self.__open_file('wb', self.__write_file)
 
   def used_count(self):
     cnt = 0
@@ -56,22 +56,22 @@ class Bitmap:
     else:  # 0
       self.field[byte_index] &= ~mask
 
-  def __read_file(self, f):
-    read_bytes = f.read()
-    i = 0
-    while i < self.field_len:
-      self.field[i] = read_bytes[i]
-      i += 1
+  # def __read_file(self, f):
+  #   read_bytes = f.read()
+  #   i = 0
+  #   while i < self.field_len:
+  #     self.field[i] = read_bytes[i]
+  #     i += 1
 
-  def __write_file(self, f):
-    f.write(self.field)
+  # def __write_file(self, f):
+  #   f.write(self.field)
 
-  def __open_file(self, mode, callback):
-    try:
-      f = open(self.f, mode)
-      callback(f)
-    finally:
-      f.close()
+  # def __open_file(self, mode, callback):
+  #   try:
+  #     f = open(self.f, mode)
+  #     callback(f)
+  #   finally:
+  #     f.close()
 
   def __repr__(self):
     buf = []
@@ -80,7 +80,7 @@ class Bitmap:
     return ','.join(buf)
 
 if __name__ == '__main__':
-  b = Bitmap(2, None)
+  b = Bitmap(2)
   b.set(2)
   print b.get(2), b.used_count()
   b.clear(2)
