@@ -12,6 +12,7 @@ import time
 import random
 
 import socket
+import select
 
 from xoy import byte_helper
 
@@ -51,18 +52,38 @@ def udp_req2_bytes(connection_id, info_hash, peer_id, downloaded, left, uploaded
   bs[96:98] = byte_helper.int2bytes2(port)
   return (transaction_id, bs)
 
+# parse_ip_port_by_url
+def to_ip_port_from_url(url):
+  port = 80
+  urls = url.split(':')
+  ip = urls[1].replace('//', '').split('/')[0]
+  if len(urls) > 2:
+    port = int(urls[-1].split('/')[0])
+
+  return (ip, port)
+
 class Udp:
-  def __init__(self, ip, port):
-    self.ip_port = (ip, port)
+  def __init__(self, ip_port):
     self.sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    self.sockfd.connect(self.ip_port)
+    print ip_port
+    self.sockfd.connect(ip_port)
 
   def send(self, info_hash, peer_id, donwloaded, left, uploaded, event, numwant, port):
     try:
+      print "udp socket connect start..."
+      infds, outfds, errfds = select.select([], [self.sockfd], [], 5)
+      if len(outfds) == 0:
+        print "udp socket timeout"
+        return None
       transaction_id, req1bytes = udp_req1_bytes()
+      print "udp send message 1 = ", req1bytes
       self.sockfd.send(req1bytes)
+      infds, outfds, errfds = select.select([self.sockfd], [], [], 5)
+      if len(infds) == 0:
+        print "udp socket can't recv"
+        return None
       recv_data = self.sockfd.recv(16)
-      print recv_data
+      print "recv date : ", recv_data
       if recv_data :
         print recv_data
         if byte_helper.bytes42int(recv_data[0:4]) == 0 and byte_helper.bytes42int(recv_data[4:8]) == transaction_id:
@@ -140,12 +161,8 @@ class Tracker:
 
 
   def __udp_request(self, url):
-    port = 80
-    urls = url.split(':')
-    ip = urls[1].replace('//', '')
-    if len(urls) > 2:
-      port = int(urls[-1])
-    ipports = Udp(ip, port).send(self.torrent.info_hash, self.peer_id,
+    ip_port = to_ip_port_from_url(url)
+    ipports = Udp(ip_port).send(self.torrent.info_hash, self.peer_id,
         self.downloaded, self.left, self.uploaded, self.event, self.numwant, self.port)
     if ipports:
       for ipport in ipports:
