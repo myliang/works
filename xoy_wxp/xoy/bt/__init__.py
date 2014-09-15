@@ -29,4 +29,4 @@ def torrent_recover(torrent, dest):
 
 if __name__ == '__main__':
   torrent = Torrent(sys.argv[1])
-  Tracker(torrent, config.bt.peer_id, config.bt.port, 0, 0, 10000).start()
+  Tracker(torrent, config.bt.peer_id, config.bt.port, 0, 0, 10000)

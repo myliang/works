@@ -5,7 +5,7 @@
 #   request:
 #   response:
 
-from threading import Thread
+import threading
 import urllib
 import urllib2
 import time
@@ -15,6 +15,8 @@ import socket
 import select
 
 from xoy import byte_helper
+
+CONNECTION_TIME_OUT = 10
 
 # udp request
 # req1 : Connecttion_ID(8字节）   0（4字节） Transaction_ID（4字节）
@@ -71,18 +73,22 @@ class Udp:
   def send(self, info_hash, peer_id, donwloaded, left, uploaded, event, numwant, port):
     try:
       print "udp socket connect start..."
-      infds, outfds, errfds = select.select([], [self.sockfd], [], 5)
+      infds, outfds, errfds = select.select([], [self.sockfd], [], CONNECTION_TIME_OUT)
+      print "input: ", infds, outfds, errfds
       if len(outfds) == 0:
         print "udp socket timeout"
         return None
       transaction_id, req1bytes = udp_req1_bytes()
       print "udp send message 1 = ", req1bytes
-      self.sockfd.send(req1bytes)
-      infds, outfds, errfds = select.select([self.sockfd], [], [], 5)
+      if self.sockfd.send(req1bytes) != 16:
+        print "udp send message error send 16 bytes"
+        return None
+      infds, outfds, errfds = select.select([self.sockfd], [], [], CONNECTION_TIME_OUT)
+      print infds, outfds, errfds
       if len(infds) == 0:
         print "udp socket can't recv"
         return None
-      recv_data = self.sockfd.recv(16)
+      recv_data = self.sockfd.recv(1024)
       print "recv date : ", recv_data
       if recv_data :
         print recv_data
@@ -104,6 +110,8 @@ class Udp:
                 i += 6
 
               return ipports
+    except Exception, e:
+      print e
     finally:
       self.close()
 
@@ -116,6 +124,7 @@ class Udp:
 
 
 TRACKER_EVENT = ["started", "completed", "stopped"]
+tracker_list = []
 
 class Tracker:
   def __init__(self, torrent, peer_id, port, uploaded, downloaded, left):
@@ -133,31 +142,34 @@ class Tracker:
     self.peers = set()
     self.running = False
 
+    # print "tracker :::::"
+    tracker_list.append(self)
+
   def peers_ip_port(self):
     return self.peers
 
   def start(self):
-    if not self.running:
-      self.running = True
-      self.loop = Thread(target = self.__loop_peers)
-      self.loop.start()
+    pass
+    # if not self.running:
+    #   self.running = True
+    #   self.loop = Thread(target = self.__loop_peers)
+    #   self.loop.start()
 
   def stop(self):
-    if self.running:
-      self.running = False
-      self.loop.join()
+    pass
+    # if self.running:
+    #   self.running = False
+    #   self.loop.join()
 
-  def __loop_peers(self):
-    while self.running:
-      time.sleep(10)
-      for url in self.torrent.announces:
-        print "tracker_url=", url
-        if url.startswith('http'):
-          self.__http_request(url)
-        elif url.startswith('udp'):
-          self.__udp_request(url)
-        else:
-          print "tracker_url [%s] is not available" % url
+  def loop(self):
+    for url in self.torrent.announces:
+      print "tracker_url=", url
+      if url.startswith('http'):
+        self.__http_request(url)
+      elif url.startswith('udp'):
+        self.__udp_request(url)
+      else:
+        print "tracker_url [%s] is not available" % url
 
 
   def __udp_request(self, url):
@@ -174,7 +186,7 @@ class Tracker:
           'port': self.port, 'uploaded': self.uploaded, 'downloaded': self.downloaded,
           'left': self.left, 'event': self.event, 'compact': self.compact, 'numwant': self.compact}
       url = "%s?%s" % (url, urllib.urlencode(payload))
-      res = urllib2.urlopen(url, timeout = 60).read()
+      res = urllib2.urlopen(url, timeout = CONNECTION_TIME_OUT).read()
       print "tracker response = ", res
       if "failure reason" not in res:
         if type(res) == str:
@@ -190,5 +202,16 @@ class Tracker:
     except Exception, e:
       print e
 
+# tracker_list loop
+# a threading run
+def loop_tracker_list():
+  while True:
+    time.sleep(10)
+    # print len(tracker_list)
+    for tracker in tracker_list:
+      # print "loop"
+      tracker.loop()
+
+threading.Thread(target = loop_tracker_list).start()
 
 

@@ -1,5 +1,5 @@
 #!/bin/python
-# coding = utf-8
+# -*- coding:utf8 -*-
 
 import sys
 import hashlib
@@ -29,10 +29,10 @@ class Torrent:
   def __init__(self, filename):
     bencode = to_bencode_from_file(filename)
     d = bencode.parse()
-    self.comment = d['comment']
+    self.encoding = d.get('encoding', 'utf-8')
+    self.comment = d['comment'].decode(self.encoding).encode('utf-8')
     self.creation_date = d['creation date']
     self.created_by = d['created by']
-    self.encoding = d.get('encoding')
 
     self.announces = []
     if d['announce-list']:
@@ -44,18 +44,21 @@ class Torrent:
     # info hash
     self.info_hash = hashlib.sha1(bencode.info).digest()
     self.name = d['info']['name']
+    if self.name:
+      self.name = self.name.decode(self.encoding).encode('utf-8')
     self.piece_length = d['info']['piece length']
     self.pieces = d['info']['pieces']
     self.files = []
 
     for f in d['info']['files']:
-      self.files.append(TorrentFile('/'.join(f['path']), f['length']))
+      path = '/'.join(f['path']).decode(self.encoding).encode('utf-8')
+      self.files.append(TorrentFile(path, f['length']))
 
     # bitfield init
     self.bitfield = Bitmap(self.blocks_len())
 
   def __repr__(self):
-    return ''.join(['%s:%s\n' % item for item in self.__dict__.items() if item[0] != "pieces" ])
+    return ''.join(['%s:%s\n' % item for item in self.__dict__.items() if item[0] != "pieces" and item[0] != 'bitfield'])
 
   def blocks_len(self):
     pl = len(self.pieces)
