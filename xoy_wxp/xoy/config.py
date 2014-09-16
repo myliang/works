@@ -16,7 +16,7 @@ def read_config():
 config = read_config()
 
 # bt
-BT_CONFIG_FIELDS = ['peer_id', 'port']
+BT_CONFIG_FIELDS = ['peer_id', 'port', 'rate_cycle_time', 'connection_time_out', 'tracker_interval_time']
 
 class ConfigBt:
   def __init__(self):
