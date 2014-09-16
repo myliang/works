@@ -57,7 +57,9 @@ class Torrent:
     # bitfield init
     self.bitfield = Bitmap(self.blocks_len())
 
-    # peer
+    # local peer
+    # remote peers
+    # active peers
     self.peers = []
 
   def __repr__(self):

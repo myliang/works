@@ -45,8 +45,11 @@ class Peer:
     self.down_count = 0 # 本计时周期从peer下载的数据的字节数
     self.up_count = 0 # 本计时周期向peer上传的数据的字节数
 
-  def is_not_request(self):
-    return self.am_interested == 0 or self.peer_choking == 1
+  def is_start_download(self):
+    return self.am_interested == 1 and self.peer_choking == 0
+
+  def is_start_upload(self):
+    return self.am_choking == 0 and self.peer_interested == 1
 
   def down_rate(self):
     self.down_count/config.bt.rate_cycle_time
