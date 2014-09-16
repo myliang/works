@@ -57,6 +57,9 @@ class Torrent:
     # bitfield init
     self.bitfield = Bitmap(self.blocks_len())
 
+    # peer
+    self.peers = []
+
   def __repr__(self):
     return ''.join(['%s:%s\n' % item for item in self.__dict__.items() if item[0] != "pieces" and item[0] != 'bitfield'])
 
@@ -66,6 +69,11 @@ class Torrent:
     if pl % 20:
       length += 1
     return length
+
+  def down_rate(self):
+    return reduce(lambda x, y: x.down_rate() + y.down_rate(), self.peers)
+  def up_rate(self):
+    return reduce(lambda x, y: x.up_rate() + y.up_rate(), self.peers)
 
 
 class TorrentFile:
