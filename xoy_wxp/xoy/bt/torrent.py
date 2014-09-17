@@ -31,9 +31,11 @@ class Torrent:
     bencode = to_bencode_from_file(filename)
     d = bencode.parse()
     self.encoding = d.get('encoding', 'utf-8')
-    self.comment = d['comment'].decode(self.encoding).encode('utf-8')
-    self.creation_date = d['creation date']
-    self.created_by = d['created by']
+    self.comment = d.get('comment')
+    if self.comment:
+      self.comment = self.comment.decode(self.encoding).encode('utf-8')
+    self.creation_date = d.get('creation date')
+    self.created_by = d.get('created by')
 
     self.announces = []
     if d['announce-list']:

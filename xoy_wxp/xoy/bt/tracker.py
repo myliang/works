@@ -6,10 +6,10 @@
 #   response:
 
 import threading
-import urllib
-import urllib2
+import requests
 import time
 import socket
+import struct
 
 from xoy import byte_helper, config
 from bencode import BEncode
@@ -79,22 +79,31 @@ class Tracker:
       payload = {'info_hash': self.torrent.info_hash, 'peer_id': self.peer_id,
           'port': self.port, 'uploaded': self.uploaded, 'downloaded': self.downloaded,
           'left': self.left, 'event': self.event, 'compact': self.compact, 'numwant': self.compact}
-      url = "%s?%s" % (url, urllib.urlencode(payload))
-      print "http url = ", url
-      res = urllib2.urlopen(url, timeout = CONNECTION_TIME_OUT).read()
-      print "tracker response = ", res
-      if "failure reason" not in res:
-        bpeers = BEncode(res).parse()['peers']
+      req = requests.get(url, params = payload, timeout = CONNECTION_TIME_OUT)
+      print "req.url = ", req.url
+
+      # print "req : ", req
+      res = req.content
+      # print "res type = ", type(res)
+      # print "tracker response = ", res
+      res = BEncode(res).parse()
+      print res
+      if res.get('peers'):
+        bpeers = res.get('peers')
         blen = len(bpeers)
         i = 0
-        print bpeers, blen
         while i < blen:
+          ip, port = struct.unpack('lH', bpeers[i: i + 6])
+          # ip = byte_helper.bytes42int(bpeers[i: i + 4])
+          print "ip before = ", ip, port
+          ip = socket.ntoa(struct.pack('l', socket.inet_htol(ip)))
+          print ip
           ip_port = (socket.inet_ntoa(bpeers[i: i + 4]), byte_helper.bytes22int(bpeers[i + 4: i + 6]))
           print "peer ip port = ", ip_port
           self.peers.add(ip_port)
           i += 6
     except Exception, e:
-      print e
+      print "Exception", e
 
 
 # parse_ip_port_by_url

@@ -1,6 +1,10 @@
 #!/bin/python
 # coding = utf-8
 
+# bytes 1 to int
+def byte2int(bs):
+  return bs[1] & 0xff
+
 # bytes 2 to int
 def bytes22int(bs):
   return (bs[0] << 8) & 0xffff + bs[1] & 0xff
