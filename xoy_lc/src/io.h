@@ -5,6 +5,7 @@
 
 // sock tcp
 int io_tcp_connect(char *ip, short port);
+int io_udp_connect(char *ip, short port);
 
 // read and write
 ssize_t io_readn(int fd, void *vptr, size_t n);

@@ -10,16 +10,27 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 
+// io connect
+static int io_connect(char *ip, short port, int family, int type);
+
 int io_tcp_connect(char *ip, short port) {
+  return io_connect(ip, port, AF_INET, SOCK_STREAM);
+}
+int io_udp_connect(char *ip, short port) {
+  return io_connect(ip, port, AF_INET, SOCK_DGRAM);
+}
+
+// io connect
+static int io_connect(char *ip, short port, int family, int type) {
   int sockfd;
   struct sockaddr_in servaddr;
 
   bzero(&servaddr, sizeof(servaddr));
-  servaddr.sin_family = AF_INET;
+  servaddr.sin_family = family;
   servaddr.sin_addr.s_addr = inet_addr(ip);
   servaddr.sin_port = htons(port);
 
-  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+  if ((sockfd = socket(family, type, 0)) < 0) {
     fprintf(stderr, "socket error\n");
     return -1;
   }
@@ -32,6 +43,7 @@ int io_tcp_connect(char *ip, short port) {
   return sockfd;
 }
 
+// io reand and write line
 ssize_t io_readn(int fd, void *vptr, size_t n) {
   size_t nleft;
   ssize_t nread;
