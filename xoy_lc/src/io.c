@@ -5,10 +5,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <netdb.h>
+#include <errno.h>
 
 // io connect
 static int io_connect(char *ip, short port, int family, int type);
@@ -23,22 +26,37 @@ int io_udp_connect(char *ip, short port) {
 // io connect
 static int io_connect(char *ip, short port, int family, int type) {
   int sockfd;
-  struct sockaddr_in servaddr;
+  struct addrinfo hints, *res;
 
-  bzero(&servaddr, sizeof(servaddr));
-  servaddr.sin_family = family;
-  servaddr.sin_addr.s_addr = inet_addr(ip);
-  servaddr.sin_port = htons(port);
+  bzero(&hints, sizeof(struct addrinfo));
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = type;
 
-  if ((sockfd = socket(family, type, 0)) < 0) {
-    fprintf(stderr, "socket error\n");
+  char port_str[20];
+  bzero(port_str, 20);
+  sprintf(port_str, "%d", port);
+
+  if (getaddrinfo(ip, port_str, &hints, &res) != 0) {
+    fprintf(stderr, "%s:%d getaddrinfo<%s, %d> error: %s\n", __FILE__, __LINE__, ip, port, strerror(errno));
     return -1;
   }
 
-  if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
-    fprintf(stderr, "connect ip<%s> error\n", ip);
-    return -1;
-  }
+  do {
+    printf("protocol: %d\n", res->ai_protocol);
+    if ((sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
+      fprintf(stderr, "%s:%d socket error: %s\n", __FILE__, __LINE__, strerror(errno));
+      continue;
+    }
+
+    if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
+      fprintf(stderr, "%s:%d connect ip<%s> error: %s\n", __FILE__, __LINE__, ip, strerror(errno));
+    } else break;
+
+    if (close(sockfd) < 0) {
+      fprintf(stderr, "%s:%d close error: %s\n", __FILE__, __LINE__, strerror(errno));
+    }
+
+  } while ((res = res->ai_next) != NULL);
 
   return sockfd;
 }

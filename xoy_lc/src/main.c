@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 
 #include "torrent.h"
+#include "io_http.h"
 
 int main (int argc, char const* argv[]) {
   int i ;
@@ -20,6 +21,10 @@ int main (int argc, char const* argv[]) {
   b_torrent* btp = b_torrent_init(bp);
   b_encode_free(bp, buf);
   b_torrent_print(btp);
+
+  // arvg[2] baidu.com for test
+  char *rbuf = http_get("http://www.baidu.com", 10);
+  printf("%s\n", rbuf);
 
   return 0;
 }
