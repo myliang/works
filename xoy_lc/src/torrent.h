@@ -24,7 +24,7 @@ typedef struct b_torrent{
   char* pieces;
   int64_t create_date;
   int64_t piece_size;
-  unsigned char info_hash[21];
+  unsigned char info_hash[20];
   unsigned char peer_id[20];
 
   b_torrent_tracker* tracker;

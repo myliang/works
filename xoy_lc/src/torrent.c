@@ -84,7 +84,7 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
       SHA1Init(&context);
       SHA1Update(&context, (unsigned char*)&bd->value->begin[0], bd->value->len);
       SHA1Final(tt->info_hash, &context);
-      tt->info_hash[20] = '\0';
+      // tt->info_hash[20] = '\0';
     }
     bd = bd->next;
   }

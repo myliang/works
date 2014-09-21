@@ -25,6 +25,7 @@ int main (int argc, char const* argv[]) {
   // arvg[2] baidu.com for test
   char *rbuf = http_get("http://www.baidu.com", 10);
   printf("%s\n", rbuf);
+  printf("%s\n", http_uri_hex(btp->info_hash, 20));
 
   return 0;
 }
