@@ -6,7 +6,7 @@
 #include "bencode.h"
 
 // b_buffer methods
-static b_buffer* b_buffer_init_with_string(const char* string, long len);
+// static b_buffer* b_buffer_init_with_string(const char* string, long len);
 static b_size b_buffer_read_int(b_buffer* buf);
 static void b_buffer_free (b_buffer* buf);
 
@@ -24,11 +24,11 @@ b_encode* b_encode_init (b_buffer* buf) {
   if(NULL == buf) return NULL;
   return parse(buf);
 }
-b_encode* b_encode_init_with_string (const char* string, long len) {
-  b_buffer* buf = b_buffer_init_with_string(string, len);
-  if(NULL == buf) return NULL;
-  return parse(buf);
-}
+// b_encode* b_encode_init_with_string (const char* string, long len) {
+//   b_buffer* buf = b_buffer_init_with_string(string, len);
+//   if(NULL == buf) return NULL;
+//   return parse(buf);
+// }
 
 void b_encode_print (b_encode* bp) {
   b_encode_print_level(bp, 0);
@@ -118,6 +118,15 @@ b_buffer* b_buffer_init (const char* file_name) {
   return buf;
 }
 
+b_buffer* b_buffer_init_with_string(const char* string, long len) {
+  b_buffer* buf = malloc(sizeof(b_buffer));
+  buf->head = buf->index = malloc(len + 1);
+  memcpy(buf->head, string, len);
+  buf->head[len] = '\0';
+  buf->len = len;
+  buf->tail = &buf->head[len - 1];
+  return buf;
+}
 
 /****** the methods of b_encode int string list dict ******************/
 static b_encode* parse_int(b_buffer* buf) {
@@ -193,15 +202,6 @@ static b_encode* b_encode_malloc(b_type type, char* begin, char* end) {
 }
 
 /****** the methods of b_buffer_init and b_buffer_free *****************/
-static b_buffer* b_buffer_init_with_string(const char* string, long len) {
-  b_buffer* buf = malloc(sizeof(b_buffer));
-  buf->head = buf->index = malloc(len + 1);
-  memcpy(buf->head, string, len);
-  buf->head[len] = '\0';
-  buf->len = len;
-  buf->tail = &buf->head[len - 1];
-  return buf;
-}
 static b_size b_buffer_read_int(b_buffer* buf) {
   b_size value = 0;
   for(; isdigit(*buf->index); buf->index++) {

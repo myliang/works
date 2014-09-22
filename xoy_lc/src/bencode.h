@@ -44,10 +44,10 @@ typedef struct b_encode{
 
 // buffer methods
 b_buffer* b_buffer_init(const char* file_name);
+b_buffer* b_buffer_init_with_string (const char* string, long len);
 
 // bencode
 b_encode* b_encode_init(b_buffer* buf);
-b_encode* b_encode_init_with_string (const char* string, long len);
 void b_encode_print(b_encode* bp);
 void b_encode_free(b_encode* bp, b_buffer* buf);
 

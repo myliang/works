@@ -9,6 +9,8 @@
 
 #include "torrent.h"
 #include "io_http.h"
+#include "tracker.h"
+
 
 int main (int argc, char const* argv[]) {
   int i ;
@@ -19,13 +21,19 @@ int main (int argc, char const* argv[]) {
   b_buffer* buf = b_buffer_init(argv[1]);
   b_encode* bp = b_encode_init(buf);
   b_torrent* btp = b_torrent_init(bp);
+  // b_encode_print(bp);
+
+  // tracker
+  request_trackers(btp, NULL, 10);
+
   b_encode_free(bp, buf);
   b_torrent_print(btp);
 
   // arvg[2] baidu.com for test
-  char *rbuf = http_get("http://www.baidu.com", 10);
-  printf("%s\n", rbuf);
-  printf("%s\n", http_uri_hex(btp->info_hash, 20));
+  // io_http_res *res = http_get("http://www.baidu.com", 10);
+  // printf("%s\n", res->content);
+  // printf("%s\n", http_uri_hex(btp->info_hash, 20));
+  // io_http_res_free(res);
 
   return 0;
 }

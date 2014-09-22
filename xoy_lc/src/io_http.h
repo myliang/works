@@ -19,6 +19,7 @@ typedef struct {
 } io_http_res;
 
 char* http_uri_hex(const unsigned char* uri, int size);
-char* http_get(const char* url, int timeout);
+io_http_res* http_get(const char* url, int timeout);
+void io_http_res_free(io_http_res* res);
 
 #endif /* end of include guard: _IO_HTTP_H_ */

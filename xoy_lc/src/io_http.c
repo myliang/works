@@ -27,9 +27,9 @@ char* http_uri_hex(const unsigned char* src, int size) {
   return dst;
 }
 
-char* http_get(const char* url, int timeout) {
+io_http_res* http_get(const char* url, int timeout) {
   io_http_req req;
-  io_http_res res;
+  io_http_res* res = malloc(sizeof(io_http_res));
   parse_url(url, &req);
   printf("http.host = %s, http.port = %d, http.path = %s, http.query = %s\n",
       req.host, req.port, req.path, req.query_string);
@@ -39,7 +39,6 @@ char* http_get(const char* url, int timeout) {
 
   // request buff
   char buf[MAX_IO_BUFFER];
-  char *content;
   // poll
   struct pollfd pfds[1];
   int maxpfds = 1, nready = 0;
@@ -81,26 +80,34 @@ char* http_get(const char* url, int timeout) {
         return NULL;
       }
       printf("response status line:\n%s\n", buf);
-      sscanf(buf, "%s %d %s", res.version, &res.status_code, res.status_message);
-      if (res.status_code == 200) {
-        int contentn = 0;
+      sscanf(buf, "%s %d %s", res->version, &res->status_code, res->status_message);
+      if (res->status_code == 200) {
+        res->content_length = 0;
         while (buf[0] != '\r' && buf[1] != '\n') {
           io_readline(sockfd, buf, sizeof(buf));
           fprintf(stdout, "%s\n", buf);
 
           // Content-Length
           if (14 == start_with(buf, "Content-Length")) {
-            contentn = atoi(buf + 15);
-            content = malloc(contentn);
+            res->content_length = atoi(buf + 15);
+            res->content = malloc(res->content_length);
           }
         }
-        io_readn(sockfd, content, contentn);
-        content[contentn] = '\0';
-        return content;
+        io_readn(sockfd, res->content, res->content_length);
+        res->content[res->content_length] = '\0';
+        return res;
       }
     }
   }
   return NULL;
+}
+
+void io_http_res_free(io_http_res* res) {
+  if (res != NULL) {
+    if (res->content != NULL)
+      free(res->content);
+    free(res);
+  }
 }
 
 // static methods
@@ -115,7 +122,7 @@ static int parse_url(const char* url, io_http_req* req) {
   for (ptr = url + 5; *ptr != '\0'; ptr++) {
     if (*ptr == '/' && *++ptr == '/') { // = host
       begin = ++ptr;
-      while (*ptr != '\0' && *ptr != '/'){
+      while (*ptr != '\0' && *ptr != '/' && *ptr != ':'){
         index++;
         ptr++;
       }

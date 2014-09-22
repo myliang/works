@@ -24,6 +24,7 @@ b_torrent* b_torrent_init(b_encode* bp) {
 
 static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
   b_dict* bd = bp->data.dpv;
+  char buf[1024];
   // printf("type=%d\n", bp->type);
   while(NULL != bd) {
     // printf("key=%s\n", bd->key);
@@ -35,13 +36,13 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
       while(NULL != bl) {
         b_encode* bll = bl->item->data.lpv->item;
         tp = tp->next = malloc_tracker(bll->data.cpv, bll->len);
-        // printf("%s\n", tp->url);
+        printf("%s\n", tp->url);
         bl = bl->next;
       }
       tt->tracker = head.next;
     }
     if(strncmp("announce", bd->key, max(key_len, 8)) == 0) {
-      if (NULL != tt->tracker) {
+      if (NULL == tt->tracker) {
         b_encode* bp = bd->value;
         tt->tracker = malloc_tracker(bp->data.cpv, bp->len);
       }
@@ -74,10 +75,19 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
       while (list) {
         b_dict* ldict = list->item->data.dpv;
         int64_t size = ldict->value->data.iv;
-        b_encode* dnext = ldict->next->value;
-        tf = tf->next = malloc_file(dnext->data.cpv, dnext->len, size);
+        b_list* paths = ldict->next->value->data.lpv;
+        unsigned int len = 0;
+        while (NULL != paths) {
+          memcpy(buf + len, paths->item->data.cpv, paths->item->len);
+          len += paths->item->len;
+          paths = paths->next;
+        }
+        buf[len] = '\0';
+        // printf("file buffer: %s\n", buf);
+        tf = tf->next = malloc_file(buf, len, size);
         list = list->next;
       }
+      tt->file = head.next;
     } else if (strncmp("info", bd->key, max(key_len, 4)) == 0) {
       _b_torrent_init(tt, bd->value);
       SHA1_CTX context;
@@ -91,7 +101,7 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
 
   // set peer_id
   srand(time(NULL));
-  sprintf((char*)tt->peer_id, "-XOY1000-%11d", rand());
+  sprintf((char*)tt->peer_id, "-XOY1000-%d", rand());
 }
 
 void b_torrent_print(b_torrent* btp) {
@@ -109,6 +119,19 @@ void b_torrent_print(b_torrent* btp) {
       printf("%.2x", btp->info_hash[i]);
     }
     printf("\n");
+    printf("    trackers:\n");
+    b_torrent_tracker* tracker = btp->tracker;
+    while (tracker != NULL) {
+      printf("      %s\n", tracker->url);
+      tracker = tracker->next;
+    }
+
+    printf("    files:\n");
+    b_torrent_file* file = btp->file;
+    while (file != NULL) {
+      printf("      %s[%lld]\n", file->name, (long long)file->size);
+      file = file->next;
+    }
     printf("    comment: %s\n", btp->comment);
   }
 }
