@@ -22,12 +22,13 @@ int main (int argc, char const* argv[]) {
   b_encode* bp = b_encode_init(buf);
   b_torrent* btp = b_torrent_init(bp);
   // b_encode_print(bp);
+  b_torrent_print(btp);
 
   // tracker
+  // printf("%s\n", btp->tracker->url);
   request_trackers(btp, NULL, 10);
 
   b_encode_free(bp, buf);
-  b_torrent_print(btp);
 
   // arvg[2] baidu.com for test
   // io_http_res *res = http_get("http://www.baidu.com", 10);

@@ -2,12 +2,13 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "bencode.h"
 
 // b_buffer methods
 // static b_buffer* b_buffer_init_with_string(const char* string, long len);
-static b_size b_buffer_read_int(b_buffer* buf);
+static uint64_t b_buffer_read_int(b_buffer* buf);
 static void b_buffer_free (b_buffer* buf);
 
 // b_encode methods
@@ -38,7 +39,7 @@ static void b_encode_print_level (b_encode* bp, int level) {
   if (NULL != bp) {
     switch (bp->type) {
       case B_INTEGER:
-        printf("%lld", bp->data.iv);
+        printf("%llu", (unsigned long long)bp->data.iv);
         break;
       case B_LIST:
         {
@@ -131,7 +132,7 @@ b_buffer* b_buffer_init_with_string(const char* string, long len) {
 /****** the methods of b_encode int string list dict ******************/
 static b_encode* parse_int(b_buffer* buf) {
   char* begin = buf->index++;
-  b_size value = b_buffer_read_int(buf);
+  uint64_t value = b_buffer_read_int(buf);
   b_encode* be = b_encode_malloc(B_INTEGER, begin, buf->index++);
   be->data.iv = value;
 #ifdef DEBUG
@@ -140,7 +141,7 @@ static b_encode* parse_int(b_buffer* buf) {
   return be;
 }
 static b_encode* parse_string(b_buffer* buf) {
-  b_size len = b_buffer_read_int(buf);
+  uint64_t len = b_buffer_read_int(buf);
   buf->index++;
   b_encode* be = b_encode_malloc(B_STRING, buf->index, buf->index + len);
   be->data.cpv = malloc(len + 1);
@@ -202,8 +203,8 @@ static b_encode* b_encode_malloc(b_type type, char* begin, char* end) {
 }
 
 /****** the methods of b_buffer_init and b_buffer_free *****************/
-static b_size b_buffer_read_int(b_buffer* buf) {
-  b_size value = 0;
+static uint64_t b_buffer_read_int(b_buffer* buf) {
+  uint64_t value = 0;
   for(; isdigit(*buf->index); buf->index++) {
     value = value * 10 + (*buf->index - '0');
   }

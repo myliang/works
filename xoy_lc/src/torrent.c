@@ -62,6 +62,10 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
       tt->create_date = bd->value->data.iv;
     }
 
+    if (strncmp("length", bd->key, max(key_len, 6)) == 0) {
+      tt->total_size = bd->value->data.iv;
+    }
+
     if (strncmp("name", bd->key, max(key_len, 4)) == 0) {
       tt->name = malloc_string(bd->value->data.cpv, bd->value->len);
     } else if (strncmp("pieces", bd->key, max(key_len, 6)) == 0) {
@@ -86,6 +90,10 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
         // printf("file buffer: %s\n", buf);
         tf = tf->next = malloc_file(buf, len, size);
         list = list->next;
+
+        // set total size
+        tt->total_size += size;
+        printf("%llu\n", (unsigned long long)tt->total_size);
       }
       tt->file = head.next;
     } else if (strncmp("info", bd->key, max(key_len, 4)) == 0) {
@@ -110,10 +118,14 @@ void b_torrent_print(b_torrent* btp) {
     printf("    name: %s\n", btp->name);
     printf("    created by: %s\n", btp->created_by);
     printf("    encoding: %s\n", btp->encoding);
-    printf("    create date: %lld\n", (long long)btp->create_date);
-    printf("    piece size: %lld\n", (long long)btp->piece_size);
+    printf("    create date: %llu\n", (unsigned long long)btp->create_date);
+    printf("    piece size: %llu\n", (unsigned long long)btp->piece_size);
     printf("    peer id: %s\n", btp->peer_id);
-    printf("    ");
+    printf("    total_size: %llu\n", (unsigned long long)btp->total_size);
+    printf("    uploaded: %llu\n", (unsigned long long)btp->uploaded);
+    printf("    downloaded: %llu\n", (unsigned long long)btp->downloaded);
+    printf("    left: %llu\n", (unsigned long long)btp->left);
+    printf("    info_hash: ");
     int i = 0;
     for (i = 0; i < 20; i++) {
       printf("%.2x", btp->info_hash[i]);

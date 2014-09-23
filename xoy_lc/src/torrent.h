@@ -2,6 +2,7 @@
 #define _TORRENT_H_
 
 #include <sys/types.h>
+#include <stdint.h>
 #include "bencode.h"
 #include "peer.h"
 
@@ -11,7 +12,7 @@ typedef struct b_torrent_tracker{
 } b_torrent_tracker;
 
 typedef struct b_torrent_file{
-  int64_t size;
+  uint64_t size;
   char* name;
   struct b_torrent_file* next;
 } b_torrent_file;
@@ -23,14 +24,22 @@ typedef struct b_torrent{
   char* encoding;
   char* pieces;
   int64_t create_date;
-  int64_t piece_size;
+  uint64_t piece_size; // bytes of a piece
+  uint64_t total_size; // files total bytes
+
   unsigned char info_hash[20];
   unsigned char peer_id[20];
 
   b_torrent_tracker* tracker;
   b_torrent_file* file;
 
+  // upload, download and left bytes
+  uint64_t uploaded;
+  uint64_t downloaded;
+  uint64_t left;
+
   b_peer* peer;
+
 } b_torrent;
 
 b_torrent* b_torrent_init(b_encode* bp);

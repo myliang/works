@@ -42,7 +42,7 @@ static int io_connect(char *ip, short port, int family, int type) {
   }
 
   do {
-    printf("protocol: %d\n", res->ai_protocol);
+    // printf("protocol: %d\n", res->ai_protocol);
     if ((sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
       fprintf(stderr, "%s:%d socket error: %s\n", __FILE__, __LINE__, strerror(errno));
       continue;
@@ -50,7 +50,7 @@ static int io_connect(char *ip, short port, int family, int type) {
 
     if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
       fprintf(stderr, "%s:%d connect ip<%s> error: %s\n", __FILE__, __LINE__, ip, strerror(errno));
-    } else break;
+    } else return sockfd;
 
     if (close(sockfd) < 0) {
       fprintf(stderr, "%s:%d close error: %s\n", __FILE__, __LINE__, strerror(errno));
@@ -58,7 +58,7 @@ static int io_connect(char *ip, short port, int family, int type) {
 
   } while ((res = res->ai_next) != NULL);
 
-  return sockfd;
+  return -1;
 }
 
 // io reand and write line

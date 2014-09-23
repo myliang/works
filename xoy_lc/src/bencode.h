@@ -1,6 +1,8 @@
 #ifndef _BENCODE_H_
 #define _BENCODE_H_
 // #define DEBUG
+//
+#include <stdint.h>
 
 typedef enum {
   B_INTEGER = 1,
@@ -16,7 +18,6 @@ typedef struct {
   char* index;
 } b_buffer;
 
-typedef long long b_size;
 struct b_encode;
 
 typedef struct b_list{
@@ -35,7 +36,7 @@ typedef struct b_encode{
   char* begin;
   unsigned int len;
   union {
-    b_size iv;
+    uint64_t iv;
     char* cpv;
     b_list* lpv;
     b_dict* dpv;

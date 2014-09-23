@@ -20,8 +20,9 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* 
 
 void request_trackers(b_torrent* tptr, b_peer* pptr, int timeout) {
   b_torrent_tracker* tracker = tptr->tracker;
+  const char* url;
   while (tracker != NULL) {
-    const char *url = tracker->url;
+    url = tracker->url;
     printf("tracker url:%s\n", url);
     if (url[0] == 'h') { // http tracker
       request_trackers_with_http(url, tptr, pptr, timeout);
@@ -43,6 +44,7 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer*
 
   io_http_res* res = http_get(full_url, timeout);
   if (res == NULL) {
+    printf("http response is null\n");
     return ;
   }
 
