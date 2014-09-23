@@ -24,11 +24,24 @@ int main (int argc, char const* argv[]) {
   // b_encode_print(bp);
   b_torrent_print(btp);
 
+  // int ta[] = {1, 2, 4, 5, 6};
+  // printf("ta.sizeof=%d\n", sizeof(ta)/sizeof(int));
+
+  // char *sa = "abc";
+  // char sb[] = "abc";
+  // char *sc[] = {"abc", "123"};
+  // int *a = &i;
+  // printf("sa.sizeof=%ld\n", sizeof(sa));
+  // printf("sb.sizeof=%ld\n", sizeof(sb));
+  // printf("sc.sizeof=%ld\n", sizeof(sc));
+  // printf("a.sizeof=%ld\n", sizeof(a));
+
   // tracker
   // printf("%s\n", btp->tracker->url);
   request_trackers(btp, NULL, 10);
 
   b_encode_free(bp, buf);
+
 
   // arvg[2] baidu.com for test
   // io_http_res *res = http_get("http://www.baidu.com", 10);
