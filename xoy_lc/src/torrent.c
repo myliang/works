@@ -18,17 +18,17 @@
 #define FWRITE_KV_STRING(v, fp) \
   len = strlen(v); \
   FWRITE_KV(v, len, fp)
-#define FWRITE_KY_SIZE_OF(v, fp) \
+#define FWRITE_KV_SIZE_OF(v, fp) \
   len = sizeof(v); \
   FWRITE_KV(&v, len, fp)
 
 // fread
-#define FREAD_KY_STRING(k, len, fp) \
+#define FREAD_KV_STRING(k, len, fp) \
   fread(&len, 4, 1, fp); \
   k = malloc(len + 1); \
   fread(k, len, 1, fp); \
   k[len] = '\0'
-#define FREAD_KY_SIZE_OF(k, len, fp) \
+#define FREAD_KV_SIZE_OF(k, len, fp) \
   fread(&len, 4, 1, fp); \
   fread(&k, len, 1, fp)
 
@@ -62,14 +62,14 @@ void b_torrent_print(b_torrent* btp) {
       printf("%.2x", btp->info_hash[i]);
     }
     printf("\n");
-    printf("    trackers:\n");
+    printf("    trackers: %d\n", btp->tracker_len);
     b_torrent_tracker* tracker = btp->tracker;
     while (tracker != NULL) {
       printf("      %s\n", tracker->url);
       tracker = tracker->next;
     }
 
-    printf("    files:\n");
+    printf("    files: %d\n", btp->file_len);
     b_torrent_file* file = btp->file;
     while (file != NULL) {
       printf("      %s[%lld]\n", file->name, (long long)file->size);
@@ -93,14 +93,29 @@ void b_torrent_store(const char* filename, b_torrent* bt) {
   FWRITE_KV_STRING(bt->encoding, fp);
   FWRITE_KV_STRING(bt->pieces, fp);
 
-  FWRITE_KY_SIZE_OF(bt->create_date, fp);
-  FWRITE_KY_SIZE_OF(bt->piece_size, fp);
-  FWRITE_KY_SIZE_OF(bt->total_size, fp);
-  FWRITE_KY_SIZE_OF(bt->info_hash, fp);
-  FWRITE_KY_SIZE_OF(bt->peer_id, fp);
-  FWRITE_KY_SIZE_OF(bt->uploaded, fp);
-  FWRITE_KY_SIZE_OF(bt->downloaded, fp);
-  FWRITE_KY_SIZE_OF(bt->left, fp);
+  FWRITE_KV_SIZE_OF(bt->create_date, fp);
+  FWRITE_KV_SIZE_OF(bt->piece_size, fp);
+  FWRITE_KV_SIZE_OF(bt->total_size, fp);
+  FWRITE_KV_SIZE_OF(bt->info_hash, fp);
+  FWRITE_KV_SIZE_OF(bt->peer_id, fp);
+  FWRITE_KV_SIZE_OF(bt->uploaded, fp);
+  FWRITE_KV_SIZE_OF(bt->downloaded, fp);
+  FWRITE_KV_SIZE_OF(bt->left, fp);
+
+  // tracker
+  b_torrent_tracker* tracker = bt->tracker;
+  while (tracker != NULL) {
+    FWRITE_KV_STRING(tracker->url, fp);
+    tracker = tracker->next;
+  }
+
+  // files
+  b_torrent_file* file = bt->file;
+  while (file != NULL) {
+    FWRITE_KV_STRING(file->name, fp);
+    FWRITE_KV_SIZE_OF(file->size, fp);
+    file = file->next;
+  }
 
   fclose(fp);
 }
@@ -115,20 +130,20 @@ b_torrent* b_torrent_recover(const char* filename) {
   }
 
   size_t len;
-  FREAD_KY_STRING(bt->name, len, fp);
-  FREAD_KY_STRING(bt->comment, len, fp);
-  FREAD_KY_STRING(bt->created_by, len, fp);
-  FREAD_KY_STRING(bt->encoding, len, fp);
-  FREAD_KY_STRING(bt->pieces, len, fp);
+  FREAD_KV_STRING(bt->name, len, fp);
+  FREAD_KV_STRING(bt->comment, len, fp);
+  FREAD_KV_STRING(bt->created_by, len, fp);
+  FREAD_KV_STRING(bt->encoding, len, fp);
+  FREAD_KV_STRING(bt->pieces, len, fp);
 
-  FREAD_KY_SIZE_OF(bt->create_date, len, fp);
-  FREAD_KY_SIZE_OF(bt->piece_size, len, fp);
-  FREAD_KY_SIZE_OF(bt->total_size, len, fp);
-  FREAD_KY_SIZE_OF(bt->info_hash, len, fp);
-  FREAD_KY_SIZE_OF(bt->peer_id, len, fp);
-  FREAD_KY_SIZE_OF(bt->uploaded, len, fp);
-  FREAD_KY_SIZE_OF(bt->downloaded, len, fp);
-  FREAD_KY_SIZE_OF(bt->left, len, fp);
+  FREAD_KV_SIZE_OF(bt->create_date, len, fp);
+  FREAD_KV_SIZE_OF(bt->piece_size, len, fp);
+  FREAD_KV_SIZE_OF(bt->total_size, len, fp);
+  FREAD_KV_SIZE_OF(bt->info_hash, len, fp);
+  FREAD_KV_SIZE_OF(bt->peer_id, len, fp);
+  FREAD_KV_SIZE_OF(bt->uploaded, len, fp);
+  FREAD_KV_SIZE_OF(bt->downloaded, len, fp);
+  FREAD_KV_SIZE_OF(bt->left, len, fp);
 
   fclose(fp);
   return bt;
@@ -145,18 +160,22 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
       b_list* bl = bd->value->data.lpv;
       b_torrent_tracker head;
       b_torrent_tracker* tp = &head;
+      tt->tracker_len = 0;
       while(NULL != bl) {
         b_encode* bll = bl->item->data.lpv->item;
         tp = tp->next = malloc_tracker(bll->data.cpv, bll->len);
         // printf("%s\n", tp->url);
         bl = bl->next;
+        tt->tracker_len++;
       }
       tt->tracker = head.next;
     }
     if(strncmp("announce", bd->key, max(key_len, 8)) == 0) {
+      tt->tracker_len = 0;
       if (NULL == tt->tracker) {
         b_encode* bp = bd->value;
         tt->tracker = malloc_tracker(bp->data.cpv, bp->len);
+        tt->tracker_len = 1;
       }
     }
 
@@ -188,6 +207,7 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
       b_list* list = bd->value->data.lpv;
       b_torrent_file head;
       b_torrent_file* tf = &head;
+      tt->file_len = 0;
       while (list) {
         b_dict* ldict = list->item->data.dpv;
         int64_t size = ldict->value->data.iv;
@@ -205,6 +225,7 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
 
         // set total size
         tt->total_size += size;
+        tt->file_len++;
         // printf("%llu\n", (unsigned long long)tt->total_size);
       }
       tt->file = head.next;

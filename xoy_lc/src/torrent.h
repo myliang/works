@@ -31,7 +31,9 @@ typedef struct b_torrent{
   unsigned char peer_id[20];
 
   b_torrent_tracker* tracker;
+  int tracker_len;
   b_torrent_file* file;
+  int file_len;
 
   // upload, download and left bytes
   uint64_t uploaded;
