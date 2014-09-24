@@ -10,6 +10,7 @@
 #include "torrent.h"
 #include "io_http.h"
 #include "tracker.h"
+#include "bitmap.h"
 
 
 int main (int argc, char const* argv[]) {
@@ -22,11 +23,14 @@ int main (int argc, char const* argv[]) {
   b_encode* bp = b_encode_init(buf);
   b_torrent* btp = b_torrent_init(bp);
   // b_encode_print(bp);
-  b_torrent_print(btp);
+  b_torrent_store("/tmp/cb.bin", btp);
+  b_torrent* btmp = b_torrent_recover("/tmp/cb.bin");
 
+  b_torrent_print(btmp);
   // int ta[] = {1, 2, 4, 5, 6};
   // printf("ta.sizeof=%d\n", sizeof(ta)/sizeof(int));
 
+  // sizeof test
   // char *sa = "abc";
   // char sb[] = "abc";
   // char *sc[] = {"abc", "123"};
@@ -35,15 +39,28 @@ int main (int argc, char const* argv[]) {
   // printf("sb.sizeof=%ld\n", sizeof(sb));
   // printf("sc.sizeof=%ld\n", sizeof(sc));
   // printf("a.sizeof=%ld\n", sizeof(a));
+  // char cn[] = "中国";
+  // printf("cn.sizeof=%ld, cn.strlen=%lu\n", sizeof(cn), strlen(cn));
+  // //
+  // bitmap test
+  bitmap* bm = bitmap_init(2);
+  printf("is seted count: %llu\n", (unsigned long long)bitmap_isseted_count(bm));
+  printf("index == 9 value:%d\n", bitmap_get(bm, 9));
+  bitmap_set(bm, 9);
+  printf("is seted count: %llu\n", (unsigned long long)bitmap_isseted_count(bm));
+  printf("index == 9 value:%d\n", bitmap_get(bm, 9));
+  bitmap_clear(bm, 9);
+  printf("is seted count: %llu\n", (unsigned long long)bitmap_isseted_count(bm));
+  printf("index == 9 value:%d\n", bitmap_get(bm, 9));
+  bitmap_free(bm);
 
   // tracker
   // printf("%s\n", btp->tracker->url);
-  request_trackers(btp, NULL, 10);
+  // request_trackers(btp, NULL, 10);
 
   b_encode_free(bp, buf);
 
-
-  // arvg[2] baidu.com for test
+  // io http test
   // io_http_res *res = http_get("http://www.baidu.com", 10);
   // printf("%s\n", res->content);
   // printf("%s\n", http_uri_hex(btp->info_hash, 20));

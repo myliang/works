@@ -11,6 +11,27 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
+// fwrite
+#define FWRITE_KV(v, len, fp) \
+  fwrite(&len, 4, 1, fp); \
+  fwrite(v, len, 1, fp)
+#define FWRITE_KV_STRING(v, fp) \
+  len = strlen(v); \
+  FWRITE_KV(v, len, fp)
+#define FWRITE_KY_SIZE_OF(v, fp) \
+  len = sizeof(v); \
+  FWRITE_KV(&v, len, fp)
+
+// fread
+#define FREAD_KY_STRING(k, len, fp) \
+  fread(&len, 4, 1, fp); \
+  k = malloc(len + 1); \
+  fread(k, len, 1, fp); \
+  k[len] = '\0'
+#define FREAD_KY_SIZE_OF(k, len, fp) \
+  fread(&len, 4, 1, fp); \
+  fread(&k, len, 1, fp)
+
 static b_torrent_tracker* malloc_tracker(char* src, int len);
 static char* malloc_string(char* src, int len);
 static void _b_torrent_init(b_torrent* tt, b_encode* bp);
@@ -20,6 +41,97 @@ b_torrent* b_torrent_init(b_encode* bp) {
   b_torrent* tt = malloc(sizeof(b_torrent));
   _b_torrent_init(tt, bp);
   return tt;
+}
+
+void b_torrent_print(b_torrent* btp) {
+  if (NULL != btp) {
+    printf("torrent: \n");
+    printf("    name: %s\n", btp->name);
+    printf("    created by: %s\n", btp->created_by);
+    printf("    encoding: %s\n", btp->encoding);
+    printf("    create date: %llu\n", (unsigned long long)btp->create_date);
+    printf("    piece size: %llu\n", (unsigned long long)btp->piece_size);
+    printf("    peer id: %s\n", btp->peer_id);
+    printf("    total_size: %llu\n", (unsigned long long)btp->total_size);
+    printf("    uploaded: %llu\n", (unsigned long long)btp->uploaded);
+    printf("    downloaded: %llu\n", (unsigned long long)btp->downloaded);
+    printf("    left: %llu\n", (unsigned long long)btp->left);
+    printf("    info_hash: ");
+    int i = 0;
+    for (i = 0; i < 20; i++) {
+      printf("%.2x", btp->info_hash[i]);
+    }
+    printf("\n");
+    printf("    trackers:\n");
+    b_torrent_tracker* tracker = btp->tracker;
+    while (tracker != NULL) {
+      printf("      %s\n", tracker->url);
+      tracker = tracker->next;
+    }
+
+    printf("    files:\n");
+    b_torrent_file* file = btp->file;
+    while (file != NULL) {
+      printf("      %s[%lld]\n", file->name, (long long)file->size);
+      file = file->next;
+    }
+    printf("    comment: %s\n", btp->comment);
+  }
+}
+
+void b_torrent_store(const char* filename, b_torrent* bt) {
+  FILE* fp = fopen(filename, "wb");
+  if (fp == NULL) {
+    fprintf(stderr, "%s:%d can not open file[%s]\n", __FILE__, __LINE__, filename);
+    return ;
+  }
+
+  size_t len = 0;
+  FWRITE_KV_STRING(bt->name, fp);
+  FWRITE_KV_STRING(bt->comment, fp);
+  FWRITE_KV_STRING(bt->created_by, fp);
+  FWRITE_KV_STRING(bt->encoding, fp);
+  FWRITE_KV_STRING(bt->pieces, fp);
+
+  FWRITE_KY_SIZE_OF(bt->create_date, fp);
+  FWRITE_KY_SIZE_OF(bt->piece_size, fp);
+  FWRITE_KY_SIZE_OF(bt->total_size, fp);
+  FWRITE_KY_SIZE_OF(bt->info_hash, fp);
+  FWRITE_KY_SIZE_OF(bt->peer_id, fp);
+  FWRITE_KY_SIZE_OF(bt->uploaded, fp);
+  FWRITE_KY_SIZE_OF(bt->downloaded, fp);
+  FWRITE_KY_SIZE_OF(bt->left, fp);
+
+  fclose(fp);
+}
+
+b_torrent* b_torrent_recover(const char* filename) {
+  b_torrent* bt = malloc(sizeof(b_torrent));
+
+  FILE* fp = fopen(filename, "rb");
+  if (fp == NULL) {
+    fprintf(stderr, "%s:%d can not open file[%s]\n", __FILE__, __LINE__, filename);
+    return NULL;
+  }
+
+  size_t len;
+  FREAD_KY_STRING(bt->name, len, fp);
+  FREAD_KY_STRING(bt->comment, len, fp);
+  FREAD_KY_STRING(bt->created_by, len, fp);
+  FREAD_KY_STRING(bt->encoding, len, fp);
+  FREAD_KY_STRING(bt->pieces, len, fp);
+
+  FREAD_KY_SIZE_OF(bt->create_date, len, fp);
+  FREAD_KY_SIZE_OF(bt->piece_size, len, fp);
+  FREAD_KY_SIZE_OF(bt->total_size, len, fp);
+  FREAD_KY_SIZE_OF(bt->info_hash, len, fp);
+  FREAD_KY_SIZE_OF(bt->peer_id, len, fp);
+  FREAD_KY_SIZE_OF(bt->uploaded, len, fp);
+  FREAD_KY_SIZE_OF(bt->downloaded, len, fp);
+  FREAD_KY_SIZE_OF(bt->left, len, fp);
+
+  fclose(fp);
+  return bt;
 }
 
 static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
@@ -36,7 +148,7 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
       while(NULL != bl) {
         b_encode* bll = bl->item->data.lpv->item;
         tp = tp->next = malloc_tracker(bll->data.cpv, bll->len);
-        printf("%s\n", tp->url);
+        // printf("%s\n", tp->url);
         bl = bl->next;
       }
       tt->tracker = head.next;
@@ -93,7 +205,7 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
 
         // set total size
         tt->total_size += size;
-        printf("%llu\n", (unsigned long long)tt->total_size);
+        // printf("%llu\n", (unsigned long long)tt->total_size);
       }
       tt->file = head.next;
     } else if (strncmp("info", bd->key, max(key_len, 4)) == 0) {
@@ -110,42 +222,6 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
   // set peer_id
   srand(time(NULL));
   sprintf((char*)tt->peer_id, "-XOY1000-%d", rand());
-}
-
-void b_torrent_print(b_torrent* btp) {
-  if (NULL != btp) {
-    printf("torrent: \n");
-    printf("    name: %s\n", btp->name);
-    printf("    created by: %s\n", btp->created_by);
-    printf("    encoding: %s\n", btp->encoding);
-    printf("    create date: %llu\n", (unsigned long long)btp->create_date);
-    printf("    piece size: %llu\n", (unsigned long long)btp->piece_size);
-    printf("    peer id: %s\n", btp->peer_id);
-    printf("    total_size: %llu\n", (unsigned long long)btp->total_size);
-    printf("    uploaded: %llu\n", (unsigned long long)btp->uploaded);
-    printf("    downloaded: %llu\n", (unsigned long long)btp->downloaded);
-    printf("    left: %llu\n", (unsigned long long)btp->left);
-    printf("    info_hash: ");
-    int i = 0;
-    for (i = 0; i < 20; i++) {
-      printf("%.2x", btp->info_hash[i]);
-    }
-    printf("\n");
-    printf("    trackers:\n");
-    b_torrent_tracker* tracker = btp->tracker;
-    while (tracker != NULL) {
-      printf("      %s\n", tracker->url);
-      tracker = tracker->next;
-    }
-
-    printf("    files:\n");
-    b_torrent_file* file = btp->file;
-    while (file != NULL) {
-      printf("      %s[%lld]\n", file->name, (long long)file->size);
-      file = file->next;
-    }
-    printf("    comment: %s\n", btp->comment);
-  }
 }
 
 static b_torrent_file* malloc_file(char* str, int strlen, int64_t file_size) {

@@ -14,6 +14,7 @@ void bitmap_free(bitmap* bm);
 
 // operator
 uint64_t bitmap_isseted_count(bitmap* bm);
+int bitmap_get(bitmap* bm, uint64_t index);
 void bitmap_set(bitmap* bm, uint64_t index);
 void bitmap_clear(bitmap* bm, uint64_t index);
 void bitmap_print(bitmap* bm);

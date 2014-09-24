@@ -42,7 +42,12 @@ typedef struct b_torrent{
 
 } b_torrent;
 
+// init and print methods
 b_torrent* b_torrent_init(b_encode* bp);
 void b_torrent_print(b_torrent* btp);
+
+// store and recover methods
+void b_torrent_store(const char* filename, b_torrent* bt);
+b_torrent* b_torrent_recover(const char* filename);
 
 #endif /* end of include guard: _TORRENT_H_ */
