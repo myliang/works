@@ -103,6 +103,7 @@ void b_torrent_store(const char* filename, b_torrent* bt) {
   FWRITE_KV_SIZE_OF(bt->left, fp);
 
   // tracker
+  FWRITE_KV_SIZE_OF(bt->tracker_len, fp);
   b_torrent_tracker* tracker = bt->tracker;
   while (tracker != NULL) {
     FWRITE_KV_STRING(tracker->url, fp);
@@ -110,20 +111,22 @@ void b_torrent_store(const char* filename, b_torrent* bt) {
   }
 
   // files
+  FWRITE_KV_SIZE_OF(bt->file_len, fp);
   b_torrent_file* file = bt->file;
   while (file != NULL) {
-    FWRITE_KV_STRING(file->name, fp);
     FWRITE_KV_SIZE_OF(file->size, fp);
+    FWRITE_KV_STRING(file->name, fp);
     file = file->next;
   }
 
-  fclose(fp);
-}
-
-b_torrent* b_torrent_recover(const char* filename) {
+  //
   b_torrent* bt = malloc(sizeof(b_torrent));
+  int i;
+  uint64_t file_size ;
+  char *url, *name;
 
   FILE* fp = fopen(filename, "rb");
+  // fseek(fp, 0, SEEK_SET);
   if (fp == NULL) {
     fprintf(stderr, "%s:%d can not open file[%s]\n", __FILE__, __LINE__, filename);
     return NULL;
@@ -145,6 +148,28 @@ b_torrent* b_torrent_recover(const char* filename) {
   FREAD_KV_SIZE_OF(bt->downloaded, len, fp);
   FREAD_KV_SIZE_OF(bt->left, len, fp);
 
+  // tracker
+  FREAD_KV_SIZE_OF(bt->tracker_len, len, fp);
+  b_torrent_tracker thead;
+  b_torrent_tracker* tracker = &thead;
+  for (i = 0; i < bt->tracker_len; i++) {
+    FREAD_KV_STRING(url, len, fp);
+    tracker = tracker->next = malloc_tracker(url, len);
+    free(url);
+  }
+  bt->tracker = thead.next;
+
+  // file
+  FREAD_KV_SIZE_OF(bt->file_len, len, fp);
+  b_torrent_file fhead;
+  b_torrent_file* file = &fhead;
+  for (i = 0; i < bt->file_len; i++) {
+    FREAD_KV_SIZE_OF(file_size, len, fp);
+    FREAD_KV_STRING(name, len, fp);
+    file = file->next = malloc_file(name, len, file_size);
+    free(name);
+  }
+  bt->file = fhead.next;
   fclose(fp);
   return bt;
 }

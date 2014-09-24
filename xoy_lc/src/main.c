@@ -12,6 +12,8 @@
 #include "tracker.h"
 #include "bitmap.h"
 
+#include <time.h>
+
 
 int main (int argc, char const* argv[]) {
   int i ;
@@ -23,9 +25,13 @@ int main (int argc, char const* argv[]) {
   b_encode* bp = b_encode_init(buf);
   b_torrent* btp = b_torrent_init(bp);
   // b_encode_print(bp);
+  b_torrent_print(btp);
+
   b_torrent_store("/tmp/cb.bin", btp);
+  sleep(10);
   b_torrent* btmp = b_torrent_recover("/tmp/cb.bin");
 
+  printf("start:::\n");
   b_torrent_print(btmp);
   // int ta[] = {1, 2, 4, 5, 6};
   // printf("ta.sizeof=%d\n", sizeof(ta)/sizeof(int));
