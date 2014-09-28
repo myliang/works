@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <stdint.h>
 
+#include <unistd.h>
 #include <poll.h>
 
 #include "io_http.h"
@@ -50,9 +51,11 @@ io_http_res* http_get(const char* url, int timeout) {
     nready = poll(pfds, maxpfds, timeout);
     if (nready < 0) {
       fprintf(stderr, "%s:%d http poll error\n", __FILE__, __LINE__);
+      close(sockfd);
       return NULL;
     } else if (nready == 0) {
       fprintf(stderr, "%s:%d http poll timeout\n", __FILE__, __LINE__);
+      close(sockfd);
       return NULL;
     }
 
@@ -68,6 +71,7 @@ io_http_res* http_get(const char* url, int timeout) {
       printf("request:\n%s\n", buf);
       if (io_writen(sockfd, buf, strlen(buf)) < 0) {
         fprintf(stderr, "%s:%d http send request error: %s\n", __FILE__, __LINE__, buf);
+        close(sockfd);
         return NULL;
       }
       pfds[0].events = POLLRDNORM;
@@ -77,6 +81,7 @@ io_http_res* http_get(const char* url, int timeout) {
       // read
       if (io_readline(sockfd, buf, sizeof(buf)) < 0) {
         fprintf(stdout, "%s:%d http recv message error\n", __FILE__, __LINE__);
+        close(sockfd);
         return NULL;
       }
       printf("response status line:\n%s\n", buf);
@@ -95,10 +100,12 @@ io_http_res* http_get(const char* url, int timeout) {
         }
         io_readn(sockfd, res->content, res->content_length);
         res->content[res->content_length] = '\0';
+        close(sockfd);
         return res;
       }
     }
   }
+  close(sockfd);
   return NULL;
 }
 

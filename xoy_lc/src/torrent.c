@@ -6,18 +6,25 @@
 
 #include "sha1.h"
 #include "torrent.h"
+#include "config.h"
 
 #define DEBUG
-#define min(a, b) ((a) < (b) ? (a) : (b))
-#define max(a, b) ((a) > (b) ? (a) : (b))
 
 // fwrite
 #define FWRITE_KV(v, len, fp) \
   fwrite(&len, 4, 1, fp); \
-  fwrite(v, len, 1, fp)
+  if (len > 0) \
+    fwrite(v, len, 1, fp)
+
 #define FWRITE_KV_STRING(v, fp) \
-  len = strlen(v); \
-  FWRITE_KV(v, len, fp)
+  len = 0; \
+  if (v == NULL) { \
+    FWRITE_KV(v, len, fp); \
+  } else { \
+    len = strlen(v); \
+    FWRITE_KV(v, len, fp); \
+  }
+
 #define FWRITE_KV_SIZE_OF(v, fp) \
   len = sizeof(v); \
   FWRITE_KV(&v, len, fp)
@@ -25,9 +32,11 @@
 // fread
 #define FREAD_KV_STRING(k, len, fp) \
   fread(&len, 4, 1, fp); \
-  k = malloc(len + 1); \
-  fread(k, len, 1, fp); \
-  k[len] = '\0'
+  if (len > 0) { \
+    k = malloc(len + 1); \
+    fread(k, len, 1, fp); \
+    k[len] = '\0'; \
+  }
 #define FREAD_KV_SIZE_OF(k, len, fp) \
   fread(&len, 4, 1, fp); \
   fread(&k, len, 1, fp)
@@ -119,6 +128,11 @@ void b_torrent_store(const char* filename, b_torrent* bt) {
     file = file->next;
   }
 
+  fflush(fp);
+  fclose(fp);
+}
+
+b_torrent* b_torrent_recover(const char* filename) {
   //
   b_torrent* bt = malloc(sizeof(b_torrent));
   int i;
@@ -235,16 +249,24 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
       tt->file_len = 0;
       while (list) {
         b_dict* ldict = list->item->data.dpv;
-        int64_t size = ldict->value->data.iv;
-        b_list* paths = ldict->next->value->data.lpv;
+        int64_t size;
         unsigned int len = 0;
-        while (NULL != paths) {
-          memcpy(buf + len, paths->item->data.cpv, paths->item->len);
-          len += paths->item->len;
-          paths = paths->next;
+        for (; ldict != NULL; ldict = ldict->next) {
+          key_len = strlen(ldict->key);
+          if (strncmp("length", ldict->key, max(key_len, 6)) == 0) {
+            size = ldict->value->data.iv;
+          }
+          if (strncmp("path", ldict->key, max(key_len, 4)) == 0) {
+            b_list* paths = ldict->value->data.lpv;
+            while (NULL != paths) {
+              memcpy(buf + len, paths->item->data.cpv, paths->item->len);
+              len += paths->item->len;
+              paths = paths->next;
+            }
+            buf[len] = '\0';
+          }
         }
-        buf[len] = '\0';
-        // printf("file buffer: %s\n", buf);
+        // printf("file buffer: %s:%d\n", buf, size);
         tf = tf->next = malloc_file(buf, len, size);
         list = list->next;
 
@@ -266,7 +288,7 @@ static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
   }
 
   // set peer_id
-  srand(time(NULL));
+  srand_curr_time;
   sprintf((char*)tt->peer_id, "-XOY1000-%d", rand());
 }
 

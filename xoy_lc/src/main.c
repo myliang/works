@@ -23,12 +23,13 @@ int main (int argc, char const* argv[]) {
 
   b_buffer* buf = b_buffer_init(argv[1]);
   b_encode* bp = b_encode_init(buf);
-  b_torrent* btp = b_torrent_init(bp);
   // b_encode_print(bp);
-  b_torrent_print(btp);
+
+  b_torrent* btp = b_torrent_init(bp);
+  // b_torrent_print(btp);
 
   b_torrent_store("/tmp/cb.bin", btp);
-  sleep(10);
+  sleep(1);
   b_torrent* btmp = b_torrent_recover("/tmp/cb.bin");
 
   printf("start:::\n");
@@ -61,10 +62,10 @@ int main (int argc, char const* argv[]) {
   bitmap_free(bm);
 
   // tracker
-  // printf("%s\n", btp->tracker->url);
-  // request_trackers(btp, NULL, 10);
+  request_trackers(btp, NULL, 10);
 
   b_encode_free(bp, buf);
+
 
   // io http test
   // io_http_res *res = http_get("http://www.baidu.com", 10);
