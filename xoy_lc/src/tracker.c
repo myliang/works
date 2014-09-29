@@ -28,6 +28,7 @@ static char *tracker_events[] = {
 static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer* pptr, int timeout);
 static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* pptr, int timeout);
 static void parse_udp_url(const char* url, char* host, short* port);
+static int udp_connect_with_url(const char* url);
 
 void request_trackers(b_torrent* tptr, b_peer* pptr, int timeout) {
   b_torrent_tracker* tracker = tptr->tracker;
@@ -38,7 +39,7 @@ void request_trackers(b_torrent* tptr, b_peer* pptr, int timeout) {
     if (url[0] == 'h') { // http tracker
       request_trackers_with_http(url, tptr, pptr, timeout);
     } else if(url[0] == 'u') { // udp tracker
-      // request_trackers_with_udp(url, tptr, pptr, timeout);
+      request_trackers_with_udp(url, tptr, pptr, timeout);
     }
     tracker = tracker->next;
   }
@@ -89,27 +90,29 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* 
   uint32_t transaction_id = rand();
   int2bytes4(index, transaction_id);
 
-  // send request
-  char host[16];
-  short port = 80;
-  parse_udp_url(url, host, &port);
-  printf("host = %s, port = %d\n", host, port);
-
   // socket
-  int sockfd = io_udp_connect(host, port);
-  int maxfd, n;
+  int sockfd = udp_connect_with_url(url);
+  if (sockfd < 0) return ;
+
+  int maxfd, n, rwflag = 0; // 0 write, 1 read, 2 write, 3 read
   struct timeval tv;
-  fd_set rset, wset;
+  fd_set fdset;
 
   tv.tv_sec = timeout;
   tv.tv_usec = 0;
-  FD_ZERO(&rset);
-  FD_ZERO(&wset);
+
   for (;;) {
-    FD_SET(sockfd, &rset);
-    FD_SET(sockfd, &wset);
+    FD_ZERO(&fdset);
+    FD_SET(sockfd, &fdset);
     maxfd = sockfd + 1;
-    n = select(maxfd, &rset, &wset, NULL, &tv);
+    // printf("before.maxfd = %d, nready = %d, rwflag = %d\n", maxfd, n, rwflag);
+    if (rwflag%2 == 0)
+      n = select(maxfd, NULL, &fdset, NULL, &tv);
+    else
+      n = select(maxfd, &fdset, NULL, NULL, &tv);
+
+    printf("maxfd = %d, nready = %d, rwflag = %d\n", maxfd, n, rwflag);
+
     if (n == 0) {
       fprintf(stderr, "%s:%d udp select timeout\n", __FILE__, __LINE__);
       close(sockfd);
@@ -120,49 +123,74 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* 
       return ;
     }
 
-    if (FD_ISSET(sockfd, &wset)) {
-      if (send(sockfd, buf, sizeof(buf), 0) < 0) {
-        fprintf(stderr, "%s:%d udp send error: %s\n", __FILE__, __LINE__, strerror(errno));
-        close(sockfd);
-        return ;
+    if (FD_ISSET(sockfd, &fdset)) {
+      switch (rwflag) {
+        case 0:
+          if (send(sockfd, buf, sizeof(buf), 0) < 0) {
+            fprintf(stderr, "%s:%d udp send error: %s\n", __FILE__, __LINE__, strerror(errno));
+            close(sockfd);
+            return ;
+          }
+          printf("write\n");
+          break ;
+        case 1:
+          if (recv(sockfd, recvbuf, sizeof(recvbuf), 0) < 0) {
+            fprintf(stderr, "%s%d udp recv error: %s\n", __FILE__, __LINE__, strerror(errno));
+            close(sockfd);
+            return ;
+          }
+          printf("udp response: %s\n", recvbuf);
+          break ;
+        case 2:
+          break ;
+        case 3:
+          return ;
+          break ;
+
       }
+
     }
 
-    if (FD_ISSET(sockfd, &rset)) {
-      if (recv(sockfd, recvbuf, sizeof(recvbuf), 0) < 0) {
-        fprintf(stderr, "%s%d udp recv error: %s\n", __FILE__, __LINE__, strerror(errno));
-        close(sockfd);
-        return ;
-      }
-
-      printf("udp response: %s\n", recvbuf);
-    }
+    rwflag++;
 
   }
 
   close(sockfd);
 }
 
+static int udp_connect_with_url(const char* url) {
+  char host[16];
+  short port = 80;
+  parse_udp_url(url, host, &port);
+  printf("host = %s, port = %d\n", host, port);
+  int sockfd = io_udp_connect(host, port);
+  return sockfd;
+}
 static void parse_udp_url(const char* url, char* host, short* port) {
   const char *ptr, *begin;
   int index = 0;
-  for (ptr = url + 4; *ptr != '\0'; ptr++) {
-    if (*ptr == '/' && *++ptr == '/') { // = host
-      begin = ++ptr;
-      while (*ptr != '\0' && *ptr != '/' && *ptr != ':'){
-        index++;
-        ptr++;
-      }
-      memcpy(host, begin, index);
-      host[index] = '\0';
-    } else if (*ptr == ':') { // = port
-      index = 0;
+
+  ptr = url + 4;
+  // for (ptr = url + 4; *ptr != '\0';) {
+  if (*ptr == '/' && *(ptr + 1) == '/') { // = host
+    ptr++;
+    begin = ++ptr;
+    while (*ptr != '\0' && *ptr != '/' && *ptr != ':'){
+      index++;
       ptr++;
-      for (; isdigit(*ptr); ptr++) {
-        index = index * 10 + (*ptr - '0');
-      }
-      *port = index;
     }
+    memcpy(host, begin, index);
+    host[index] = '\0';
   }
+
+  if (*ptr == ':') { // = port
+    index = 0;
+    ptr++;
+    for (; isdigit(*ptr); ptr++) {
+      index = index * 10 + (*ptr - '0');
+    }
+    *port = index;
+  }
+  // }
 }
 

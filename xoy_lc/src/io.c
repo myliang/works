@@ -50,7 +50,10 @@ static int io_connect(char *ip, short port, int family, int type) {
 
     if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
       fprintf(stderr, "%s:%d connect ip<%s> error: %s\n", __FILE__, __LINE__, ip, strerror(errno));
-    } else return sockfd;
+    } else {
+      // printf("sockfd: %d\n", sockfd);
+      return sockfd;
+    }
 
     if (close(sockfd) < 0) {
       fprintf(stderr, "%s:%d close error: %s\n", __FILE__, __LINE__, strerror(errno));

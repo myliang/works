@@ -126,41 +126,49 @@ static int parse_url(const char* url, io_http_req* req) {
   req->path[1] = '\0';
   req->query_string[0] = '\0';
 
-  for (ptr = url + 5; *ptr != '\0'; ptr++) {
-    if (*ptr == '/' && *++ptr == '/') { // = host
-      begin = ++ptr;
-      while (*ptr != '\0' && *ptr != '/' && *ptr != ':'){
-        index++;
-        ptr++;
-      }
-      memcpy(req->host, begin, index);
-      req->host[index] = '\0';
-    } else if (*ptr == ':') { // = port
-      index = 0;
+  ptr = url + 5;
+  // for (ptr = url + 5; *ptr != '\0'; ptr++) {
+  if (*ptr == '/' && *(ptr + 1) == '/') { // = host
+    ptr++;
+    begin = ++ptr;
+    while (*ptr != '\0' && *ptr != '/' && *ptr != ':'){
+      index++;
       ptr++;
-      for (; isdigit(*ptr); ptr++) {
-        index = index * 10 + (*ptr - '0');
-      }
-      req->port = index;
-    } else if (*ptr == '/') { // = path
-      begin = ptr;
-      index = 0;
-      while (*ptr != '?' || *ptr != '\0') {
-        index++;
-        ptr++;
-      }
-      memcpy(req->path, begin, index);
-      req->path[index] = '\0';
-    } else if (*ptr == '?') {
-      index = 0;
-      begin = ++ptr;
-      for (; *ptr != '\0'; ptr++) {
-        index++;
-      }
-      memcpy(req->query_string, begin, index);
-      req->query_string[index] = '\0';
     }
+    memcpy(req->host, begin, index);
+    req->host[index] = '\0';
   }
+
+  if (*ptr == ':') { // = port
+    index = 0;
+    ptr++;
+    for (; isdigit(*ptr); ptr++) {
+      index = index * 10 + (*ptr - '0');
+    }
+    req->port = index;
+  }
+
+  if (*ptr == '/') { // = path
+    begin = ptr;
+    index = 0;
+    while (*ptr != '?' && *ptr != '\0') {
+      index++;
+      ptr++;
+    }
+    memcpy(req->path, begin, index);
+    req->path[index] = '\0';
+  }
+
+  if (*ptr == '?') {
+    index = 0;
+    begin = ++ptr;
+    for (; *ptr != '\0'; ptr++) {
+      index++;
+    }
+    memcpy(req->query_string, begin, index);
+    req->query_string[index] = '\0';
+  }
+  // }
   return 1;
 }
 
