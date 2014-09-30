@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 typedef struct {
-  char *buf;
+  unsigned char *buf;
   int len;
 } bitmap;
 

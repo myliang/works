@@ -63,7 +63,7 @@ void bitmap_clear(bitmap* bm, uint64_t index) {
 void bitmap_print(bitmap* bm) {
   int i;
   for (i = 0; i < bm->len; i++) {
-    char c = bm->buf[i];
+    unsigned char c = bm->buf[i];
     printf("%.2x ", c);
   }
   printf("\n");

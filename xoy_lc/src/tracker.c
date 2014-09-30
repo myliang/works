@@ -18,12 +18,38 @@
 #include "io_http.h"
 
 #define TRACKER_NUMWANT 200
+#define UDP_CONNECTION_ID 0x41727101980
+
+enum EVENT {
+  NONE,
+  COMPLETED,
+  STARTED,
+  STOPPED
+};
 
 static char *tracker_events[] = {
-  "started",
-  "stopped",
+  "none",
   "completed"
+  "started",
+  "stopped"
 };
+
+#define EVENT_COMPLETED tracker_events[COMPLETED]
+#define EVENT_STARTED tracker_events[STARTED]
+#define EVENT_STOPPED tracker_events[STOPPED]
+
+#define UDP_SEND(sockfd, buf) \
+  if (send(sockfd, buf, sizeof(buf), 0) < 0) { \
+    fprintf(stderr, "%s:%d udp send error: %s\n", __FILE__, __LINE__, strerror(errno)); \
+    close(sockfd); \
+    return ; \
+  }
+#define UDP_RECV(sockfd, buf) \
+  if (recv(sockfd, buf, sizeof(buf), 0) < 0) { \
+    fprintf(stderr, "%s%d udp recv error: %s\n", __FILE__, __LINE__, strerror(errno)); \
+    close(sockfd); \
+    return ; \
+  }
 
 static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer* pptr, int timeout);
 static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* pptr, int timeout);
@@ -51,7 +77,7 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer*
   snprintf(full_url, sizeof(full_url) - 1,
       "%s?info_hash=%s&peer_id=%s&port=%d&uploaded=%d&downloaded=%d&left=%d&event=%s&numwant=%d&compact=1",
       url, http_uri_hex(tptr->info_hash, 20), http_uri_hex(tptr->peer_id, 20),
-      LISTEN_PORT, 0, 0, 10240000, tracker_events[0], TRACKER_NUMWANT);
+      LISTEN_PORT, 0, 0, 10240000, EVENT_STARTED, TRACKER_NUMWANT);
   full_url[sizeof(full_url) - 1] = '\0';
   // printf("url=%s\n", full_url);
 
@@ -80,20 +106,15 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer*
 // res: 1(4 bytes) transaction_id(4 bytes) interval(4 bytes) downalod(4 bytes) peers(4 bytes) ip(4 bytes) port (2)
 static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* pptr, int timeout) {
   // request message
-  char buf[16];
-  bzero(buf, 16);
-  char recvbuf[2048];
-  char* index = buf, *end;
-  int2bytes8(index, 0x41727101980);
-  end = index + 4;
-  int2byte(index, end, 0x00);
+  unsigned char buf[16], buf1[98];
+  unsigned char recvbuf[2048];
+  unsigned char *begin = buf, *end;
   srand_curr_time;
   uint32_t transaction_id = rand();
-  int2bytes4(index, transaction_id);
 
   int i;
   for (i = 0; i < 16; i++) {
-    printf("%.2x ", (unsigned char)buf[i]);
+    printf("%.2x ", buf[i]);
   }
   printf("\n");
 
@@ -133,26 +154,49 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* 
     if (FD_ISSET(sockfd, &fdset)) {
       switch (rwflag) {
         case 0:
-          if (send(sockfd, buf, sizeof(buf), 0) < 0) {
-            fprintf(stderr, "%s:%d udp send error: %s\n", __FILE__, __LINE__, strerror(errno));
-            close(sockfd);
-            return ;
-          }
+          int2bytes8(begin, UDP_CONNECTION_ID);
+          end = begin + 4;
+          int2byte(begin, end, 0x00);
+          int2bytes4(begin, transaction_id);
+          UDP_SEND(sockfd, buf);
           printf("write\n");
           break ;
         case 1:
-          if (recv(sockfd, recvbuf, sizeof(recvbuf), 0) < 0) {
-            fprintf(stderr, "%s%d udp recv error: %s\n", __FILE__, __LINE__, strerror(errno));
-            close(sockfd);
-            return ;
+          UDP_RECV(sockfd, recvbuf);
+          begin = recvbuf;
+          if (bytes42int(begin) == 0 && bytes42int(begin) == transaction_id) {
+            printf("udp success: %s\n", recvbuf);
+            break;
           }
-          printf("udp response: %s\n", recvbuf);
-          break ;
+          printf("udp response vidate error \n");
+          return ;
         case 2:
+          begin = buf1;
+          int2bytes8(begin, UDP_CONNECTION_ID);
+          int2bytes4(begin, 0x01);
+          int2bytes4(begin, transaction_id);
+          memcpy(begin, tptr->info_hash, 20);
+          begin += 20;
+          memcpy(begin, tptr->peer_id, 20);
+          begin += 20;
+          int2bytes8(begin, tptr->downloaded);
+          int2bytes8(begin, tptr->left);
+          int2bytes8(begin, tptr->uploaded);
+          int2bytes4(begin, STARTED);
+          int2bytes4(begin, 0x00);
+          int2bytes8(begin, (long long)0x00);
+          int2bytes4(begin, LISTEN_PORT);
+          UDP_SEND(sockfd, buf1);
           break ;
         case 3:
+          UDP_RECV(sockfd, recvbuf);
+          begin = recvbuf;
+          if (bytes42int(begin) == 1 && bytes42int(begin) == transaction_id) {
+            printf("udp success: %s\n", recvbuf);
+            break;
+          }
+          printf("udp reponse validate error\n");
           return ;
-          break ;
 
       }
 
