@@ -81,6 +81,7 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer*
 static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* pptr, int timeout) {
   // request message
   char buf[16];
+  bzero(buf, 16);
   char recvbuf[2048];
   char* index = buf, *end;
   int2bytes8(index, 0x41727101980);
@@ -89,6 +90,12 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* 
   srand_curr_time;
   uint32_t transaction_id = rand();
   int2bytes4(index, transaction_id);
+
+  int i;
+  for (i = 0; i < 16; i++) {
+    printf("%.2x ", (unsigned char)buf[i]);
+  }
+  printf("\n");
 
   // socket
   int sockfd = udp_connect_with_url(url);

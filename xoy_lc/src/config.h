@@ -31,7 +31,7 @@
   *buf++ = v & 0xff
 
 #define int2byte(begin, end, v) \
-  while (begin < end) { *begin++ = v & 0xff; }
+  while (begin < end) { *begin++ = v; }
 
 
 #endif /* end of include guard: _CONFIG_H_ */
