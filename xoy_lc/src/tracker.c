@@ -53,28 +53,28 @@ static char *tracker_events[] = {
     return ; \
   }
 
-static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer* pptr, int timeout);
-static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* pptr, int timeout);
+static void request_trackers_with_http(const char* url, b_torrent* tptr, int timeout);
+static void request_trackers_with_udp(const char* url, b_torrent* tptr, int timeout);
 static void parse_udp_url(const char* url, char* host, short* port);
 static int udp_connect_with_url(const char* url);
 
-void request_trackers(b_torrent* tptr, b_peer* pptr, int timeout) {
+void request_trackers(b_torrent* tptr, int timeout) {
   b_torrent_tracker* tracker = tptr->tracker;
   const char* url;
   while (tracker != NULL) {
     url = tracker->url;
     printf("tracker url: %s\n", url);
     if (url[0] == 'h') { // http tracker
-      request_trackers_with_http(url, tptr, pptr, timeout);
+      request_trackers_with_http(url, tptr, timeout);
     } else if(url[0] == 'u') { // udp tracker
-      request_trackers_with_udp(url, tptr, pptr, timeout);
+      request_trackers_with_udp(url, tptr, timeout);
     }
     tracker = tracker->next;
   }
 }
 
 // static methods
-static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer* pptr, int timeout) {
+static void request_trackers_with_http(const char* url, b_torrent* tptr, int timeout) {
   char full_url[1024];
   struct in_addr addr;
   int i, port;
@@ -91,8 +91,6 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer*
     return ;
   }
 
-  printf("http response : %s\n", res->content);
-
   // format response content
   b_buffer* buf = b_buffer_init_with_string(res->content, res->content_length);
   b_encode* be = b_encode_init(buf);
@@ -102,19 +100,32 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer*
   while (bdict != NULL) {
     if (strncmp("peers", bdict->key, max(5, strlen(bdict->key))) == 0) {
       char *index = bdict->value->data.cpv;
+      b_peer bprhead;
+      b_peer *bpr = &bprhead;
       for (i = 0; i < bdict->value->len; i += 6) {
         // printf("%u.%u.%u.%u\n", (unsigned char)index[i + 0], (unsigned char)index[i + 1], (unsigned char)index[i + 2], (unsigned char)index[i + 3]);
         addr.s_addr = bytes42int(index + i);
         port = bytes22int(index + i + 4);
-        printf("%lu:%s:%d\n", (unsigned long)addr.s_addr, inet_ntoa(addr), port);
+
+        b_peer *bp1 = b_peer_init();
+        bp1->port = port;
+        memcpy(bp1->ip, inet_ntoa(addr), 16);
+        // printf("%lu:%s:%d\n", (unsigned long)addr.s_addr, bp1->ip, bp1->port);
+
+        if (b_peer_contain(tptr->peer, bp1) == 0) {
+          bpr->next = bp1;
+        }
       }
+
+      if (tptr->peer == NULL) tptr->peer = bprhead.next;
+      else tptr->peer->next = bprhead.next;
+
       break;
     }
     bdict = bdict->next;
   }
 
-  b_encode_print(be);
-
+  io_http_res_free(res);
   b_encode_free(be, buf);
 
 }
@@ -124,7 +135,7 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer*
 // req: info_hash(20 bytes) peer_id(20 bytes) download(8 bytes) left(8 bytes) upload(8 bytes) event(4 bytes)
 //      ip(4 bytes) 0(8 bytes) port(2 bytes)
 // res: 1(4 bytes) transaction_id(4 bytes) interval(4 bytes) downalod(4 bytes) peers(4 bytes) ip(4 bytes) port (2)
-static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* pptr, int timeout) {
+static void request_trackers_with_udp(const char* url, b_torrent* tptr, int timeout) {
   // request message
   unsigned char buf[16], buf1[98];
   unsigned char recvbuf[2048];

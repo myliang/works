@@ -5,7 +5,7 @@
 
 typedef struct b_peer{
 
-  char ip[20];
+  char ip[16];
   unsigned int port;
 
   // int16_t am_choking = 1;

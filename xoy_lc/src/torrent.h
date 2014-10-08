@@ -41,6 +41,7 @@ typedef struct b_torrent{
   uint64_t left;
 
   b_peer* peer;
+  int peer_len;
 
 } b_torrent;
 

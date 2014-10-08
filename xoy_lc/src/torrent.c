@@ -85,7 +85,14 @@ void b_torrent_print(b_torrent* btp) {
       printf("      %s[%lld]\n", file->name, (long long)file->size);
       file = file->next;
     }
+    printf("    peer: %d\n", btp->peer_len);
+    b_peer* peer = btp->peer;
+    while (peer != NULL) {
+      printf("      %s:%d\n", peer->ip, peer->port);
+      peer = peer->next;
+    }
     printf("    comment: %s\n", btp->comment);
+
   }
 }
 
