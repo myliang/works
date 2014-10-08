@@ -11,33 +11,33 @@
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
 #define bytes42int(buf) \
-  ((*buf++ << 24 & 0xffffffff) + (*buf++ << 16 & 0xffffff) + (*buf++ << 8 & 0xffff) + (*buf++ & 0xff))
+  (((buf)[0] << 24 & 0xffffffff) + ((buf)[1] << 16 & 0xffffff) + ((buf)[2] << 8 & 0xffff) + ((buf)[3] & 0xff))
 
 #define bytes22int(buf) \
-  ((*buf++ << 8 & 0xffff) + (*buf++ & 0xff))
+  (((buf)[0] << 8 & 0xffff) + ((buf)[1] & 0xff))
 
 #define int2bytes8(buf, v) \
-  *buf++ = v >> 56 & 0xff; \
-  *buf++ = v >> 48 & 0xff; \
-  *buf++ = v >> 40 & 0xff; \
-  *buf++ = v >> 32 & 0xff; \
-  *buf++ = v >> 24 & 0xff; \
-  *buf++ = v >> 16 & 0xff; \
-  *buf++ = v >> 8 & 0xff; \
-  *buf++ = v & 0xff
+  (buf)[0] = v >> 56 & 0xff; \
+  (buf)[1] = v >> 48 & 0xff; \
+  (buf)[2] = v >> 40 & 0xff; \
+  (buf)[3] = v >> 32 & 0xff; \
+  (buf)[4] = v >> 24 & 0xff; \
+  (buf)[5] = v >> 16 & 0xff; \
+  (buf)[6] = v >> 8 & 0xff; \
+  (buf)[7] = v & 0xff
 
 #define int2bytes4(buf, v) \
-  *buf++ = v >> 24 & 0xff; \
-  *buf++ = v >> 16 & 0xff; \
-  *buf++ = v >> 8 & 0xff; \
-  *buf++ = v & 0xff
+  (buf)[0] = v >> 24 & 0xff; \
+  (buf)[1] = v >> 16 & 0xff; \
+  (buf)[2] = v >> 8 & 0xff; \
+  (buf)[3] = v & 0xff
 
 #define int2bytes2(buf, v) \
-  *buf++ = v >> 8 & 0xff; \
-  *buf++ = v & 0xff
+  (buf)[0] = v >> 8 & 0xff; \
+  (buf)[1] = v & 0xff
 
-#define int2byte(begin, end, v) \
-  while (begin < end) { *begin++ = v; }
+#define int2byte(buf, v) \
+  (buf)[0] = v & 0xff
 
 
 #endif /* end of include guard: _CONFIG_H_ */

@@ -103,11 +103,11 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer*
     if (strncmp("peers", bdict->key, max(5, strlen(bdict->key))) == 0) {
       char *index = bdict->value->data.cpv;
       for (i = 0; i < bdict->value->len; i += 6) {
-        addr.s_addr = bytes42int(index);
-        port = bytes22int(index);
+        // printf("%u.%u.%u.%u\n", (unsigned char)index[i + 0], (unsigned char)index[i + 1], (unsigned char)index[i + 2], (unsigned char)index[i + 3]);
+        addr.s_addr = bytes42int(index + i);
+        port = bytes22int(index + i + 4);
         printf("%lu:%s:%d\n", (unsigned long)addr.s_addr, inet_ntoa(addr), port);
       }
-      bdict->value->len;
       break;
     }
     bdict = bdict->next;
@@ -122,13 +122,13 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer*
 // req: connection_id(8 bytes) 0 (4 bytes) transaction_id(4 bytes)
 // res: 0(4 bytes) transaction_id(4 bytes) connection_id(8 bytes)
 // req: info_hash(20 bytes) peer_id(20 bytes) download(8 bytes) left(8 bytes) upload(8 bytes) event(4 bytes)
-//      ip(4 bytes) 0(8 bytes) port(4 bytes)
+//      ip(4 bytes) 0(8 bytes) port(2 bytes)
 // res: 1(4 bytes) transaction_id(4 bytes) interval(4 bytes) downalod(4 bytes) peers(4 bytes) ip(4 bytes) port (2)
 static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* pptr, int timeout) {
   // request message
   unsigned char buf[16], buf1[98];
   unsigned char recvbuf[2048];
-  unsigned char *begin = buf, *end;
+  unsigned char *begin = buf;
   srand_curr_time;
   uint32_t transaction_id = rand();
 
@@ -171,9 +171,11 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* 
       switch (rwflag) {
         case 0:
           int2bytes8(begin, UDP_CONNECTION_ID);
-          end = begin + 4;
-          int2byte(begin, end, 0x00);
-          int2bytes4(begin, transaction_id);
+          int2byte(begin + 8, 0x00);
+          int2byte(begin + 9, 0x00);
+          int2byte(begin + 10, 0x00);
+          int2byte(begin + 11, 0x00);
+          int2bytes4(begin + 12, transaction_id);
 
           for (i = 0; i < 16; i++) {
             printf("%.2x ", buf[i]);
@@ -186,7 +188,7 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* 
         case 1:
           UDP_RECV(sockfd, recvbuf);
           begin = recvbuf;
-          if (bytes42int(begin) == 0 && bytes42int(begin) == transaction_id) {
+          if (bytes42int(begin) == 0 && bytes42int(begin + 4) == transaction_id) {
             printf("udp success: %s\n", recvbuf);
             break;
           }
@@ -195,19 +197,17 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* 
         case 2:
           begin = buf1;
           int2bytes8(begin, UDP_CONNECTION_ID);
-          int2bytes4(begin, 0x01);
-          int2bytes4(begin, transaction_id);
-          memcpy(begin, tptr->info_hash, 20);
-          begin += 20;
-          memcpy(begin, tptr->peer_id, 20);
-          begin += 20;
-          int2bytes8(begin, tptr->downloaded);
-          int2bytes8(begin, tptr->left);
-          int2bytes8(begin, tptr->uploaded);
-          int2bytes4(begin, STARTED);
-          int2bytes4(begin, 0x00);
-          int2bytes8(begin, (long long)0x00);
-          int2bytes4(begin, LISTEN_PORT);
+          int2bytes4(begin + 8, 0x01);
+          int2bytes4(begin + 12, transaction_id);
+          memcpy(begin + 16, tptr->info_hash, 20);
+          memcpy(begin + 36, tptr->peer_id, 20);
+          int2bytes8(begin + 56, tptr->downloaded);
+          int2bytes8(begin + 64, tptr->left);
+          int2bytes8(begin + 72, tptr->uploaded);
+          int2bytes4(begin + 80, STARTED);
+          int2bytes4(begin + 84, 0x00);
+          int2bytes8(begin + 88, (long long)0x00);
+          int2bytes2(begin + 96, LISTEN_PORT);
           UDP_SEND(sockfd, buf1);
           break ;
         case 3:
