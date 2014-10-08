@@ -44,17 +44,17 @@ static char *tracker_events[] = {
   if (send(sockfd, buf, sizeof(buf), 0) < 0) { \
     fprintf(stderr, "%s:%d udp send error: %s\n", __FILE__, __LINE__, strerror(errno)); \
     close(sockfd); \
-    return ; \
+    return 0; \
   }
 #define UDP_RECV(sockfd, buf) \
   if (recv(sockfd, buf, sizeof(buf), 0) < 0) { \
     fprintf(stderr, "%s%d udp recv error: %s\n", __FILE__, __LINE__, strerror(errno)); \
     close(sockfd); \
-    return ; \
+    return 0; \
   }
 
-static void request_trackers_with_http(const char* url, b_torrent* tptr, int timeout);
-static void request_trackers_with_udp(const char* url, b_torrent* tptr, int timeout);
+static int request_trackers_with_http(const char* url, b_torrent* tptr, int timeout);
+static int request_trackers_with_udp(const char* url, b_torrent* tptr, int timeout);
 static void parse_udp_url(const char* url, char* host, short* port);
 static int udp_connect_with_url(const char* url);
 
@@ -65,16 +65,18 @@ void request_trackers(b_torrent* tptr, int timeout) {
     url = tracker->url;
     printf("tracker url: %s\n", url);
     if (url[0] == 'h') { // http tracker
-      request_trackers_with_http(url, tptr, timeout);
+      if (request_trackers_with_http(url, tptr, timeout) == 1)
+        return ;
     } else if(url[0] == 'u') { // udp tracker
-      request_trackers_with_udp(url, tptr, timeout);
+      if (request_trackers_with_udp(url, tptr, timeout) == 1)
+        return ;
     }
     tracker = tracker->next;
   }
 }
 
 // static methods
-static void request_trackers_with_http(const char* url, b_torrent* tptr, int timeout) {
+static int request_trackers_with_http(const char* url, b_torrent* tptr, int timeout) {
   char full_url[1024];
   struct in_addr addr;
   int i, port;
@@ -88,7 +90,7 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, int tim
   io_http_res* res = http_get(full_url, timeout);
   if (res == NULL) {
     printf("http response is null\n");
-    return ;
+    return 0;
   }
 
   // format response content
@@ -113,14 +115,14 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, int tim
         // printf("%lu:%s:%d\n", (unsigned long)addr.s_addr, bp1->ip, bp1->port);
 
         if (b_peer_contain(tptr->peer, bp1) == 0) {
-          bpr->next = bp1;
+          bpr = bpr->next = bp1;
+          tptr->peer_len++;
         }
       }
 
       if (tptr->peer == NULL) tptr->peer = bprhead.next;
       else tptr->peer->next = bprhead.next;
-
-      break;
+      return 1;
     }
     bdict = bdict->next;
   }
@@ -128,6 +130,7 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, int tim
   io_http_res_free(res);
   b_encode_free(be, buf);
 
+  return 0;
 }
 
 // req: connection_id(8 bytes) 0 (4 bytes) transaction_id(4 bytes)
@@ -135,7 +138,7 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, int tim
 // req: info_hash(20 bytes) peer_id(20 bytes) download(8 bytes) left(8 bytes) upload(8 bytes) event(4 bytes)
 //      ip(4 bytes) 0(8 bytes) port(2 bytes)
 // res: 1(4 bytes) transaction_id(4 bytes) interval(4 bytes) downalod(4 bytes) peers(4 bytes) ip(4 bytes) port (2)
-static void request_trackers_with_udp(const char* url, b_torrent* tptr, int timeout) {
+static int request_trackers_with_udp(const char* url, b_torrent* tptr, int timeout) {
   // request message
   unsigned char buf[16], buf1[98];
   unsigned char recvbuf[2048];
@@ -147,7 +150,7 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, int time
 
   // socket
   int sockfd = udp_connect_with_url(url);
-  if (sockfd < 0) return ;
+  if (sockfd < 0) return 0;
 
   int maxfd, n, rwflag = 0; // 0 write, 1 read, 2 write, 3 read
   struct timeval tv;
@@ -171,11 +174,11 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, int time
     if (n == 0) {
       fprintf(stderr, "%s:%d udp select timeout\n", __FILE__, __LINE__);
       close(sockfd);
-      return ;
+      return 0;
     } else if (n < 0) {
       fprintf(stderr, "%s:%d udp select error: %s\n", __FILE__, __LINE__, strerror(errno));
       close(sockfd);
-      return ;
+      return 0;
     }
 
     if (FD_ISSET(sockfd, &fdset)) {
@@ -204,7 +207,7 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, int time
             break;
           }
           printf("udp response vidate error \n");
-          return ;
+          return 0;
         case 2:
           begin = buf1;
           int2bytes8(begin, UDP_CONNECTION_ID);
@@ -226,10 +229,10 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, int time
           begin = recvbuf;
           if (bytes42int(begin) == 1 && bytes42int(begin) == transaction_id) {
             printf("udp success: %s\n", recvbuf);
-            break;
+            return 1;
           }
           printf("udp reponse validate error\n");
-          return ;
+          return 0;
 
       }
 
@@ -240,6 +243,7 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, int time
   }
 
   close(sockfd);
+  return 0;
 }
 
 static int udp_connect_with_url(const char* url) {
