@@ -49,6 +49,7 @@ static b_torrent_file* malloc_file(char* str, int strlen, int64_t file_size);
 b_torrent* b_torrent_init(b_encode* bp) {
   b_torrent* tt = malloc(sizeof(b_torrent));
   _b_torrent_init(tt, bp);
+  tt->left = tt->total_size;
   return tt;
 }
 

@@ -62,7 +62,7 @@ int main (int argc, char const* argv[]) {
   bitmap_free(bm);
 
   // tracker
-  request_trackers(btp, NULL, 10);
+  request_trackers(btp, NULL, 100);
 
   b_encode_free(bp, buf);
 

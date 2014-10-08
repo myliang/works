@@ -42,12 +42,13 @@ io_http_res* http_get(const char* url, int timeout) {
   char buf[MAX_IO_BUFFER];
   // poll
   struct pollfd pfds[1];
-  int maxpfds = 1, nready = 0;
+  int maxpfds = 1, nready = 0, n;
 
   pfds[0].fd = sockfd;
   pfds[0].events = POLLWRNORM;
 
   for (;;) {
+    bzero(buf, sizeof(buf));
     nready = poll(pfds, maxpfds, timeout);
     if (nready < 0) {
       fprintf(stderr, "%s:%d http poll error\n", __FILE__, __LINE__);
@@ -86,6 +87,9 @@ io_http_res* http_get(const char* url, int timeout) {
       }
       printf("response status line:\n%s\n", buf);
       sscanf(buf, "%s %d %s", res->version, &res->status_code, res->status_message);
+
+      // io_readn(sockfd, buf, 1024);
+      // printf("%s\n", buf);
       if (res->status_code == 200) {
         res->content_length = 0;
         while (buf[0] != '\r' && buf[1] != '\n') {
@@ -98,11 +102,16 @@ io_http_res* http_get(const char* url, int timeout) {
             res->content = malloc(res->content_length);
           }
         }
-        io_readn(sockfd, res->content, res->content_length);
-        res->content[res->content_length] = '\0';
+        if (res->content_length <= 0) {
+          res->content_length = 8192;
+          res->content = malloc(res->content_length);
+        }
+        n = io_readn(sockfd, res->content, res->content_length);
+        res->content[n] = '\0';
         close(sockfd);
         return res;
       }
+      break;
     }
   }
   close(sockfd);

@@ -13,6 +13,9 @@
 #define bytes42int(buf) \
   ((*buf++ << 24 & 0xffffffff) + (*buf++ << 16 & 0xffffff) + (*buf++ << 8 & 0xffff) + (*buf++ & 0xff))
 
+#define bytes22int(buf) \
+  ((*buf++ << 8 & 0xffff) + (*buf++ & 0xff))
+
 #define int2bytes8(buf, v) \
   *buf++ = v >> 56 & 0xff; \
   *buf++ = v >> 48 & 0xff; \

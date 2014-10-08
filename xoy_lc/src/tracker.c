@@ -9,6 +9,8 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 #include "config.h"
 #include "bencode.h"
@@ -17,7 +19,7 @@
 #include "io.h"
 #include "io_http.h"
 
-#define TRACKER_NUMWANT 200
+#define TRACKER_NUMWANT 100
 #define UDP_CONNECTION_ID 0x41727101980
 
 enum EVENT {
@@ -29,7 +31,7 @@ enum EVENT {
 
 static char *tracker_events[] = {
   "none",
-  "completed"
+  "completed",
   "started",
   "stopped"
 };
@@ -74,10 +76,12 @@ void request_trackers(b_torrent* tptr, b_peer* pptr, int timeout) {
 // static methods
 static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer* pptr, int timeout) {
   char full_url[1024];
+  struct in_addr addr;
+  int i, port;
   snprintf(full_url, sizeof(full_url) - 1,
-      "%s?info_hash=%s&peer_id=%s&port=%d&uploaded=%d&downloaded=%d&left=%d&event=%s&numwant=%d&compact=1",
+      "%s?info_hash=%s&peer_id=%s&port=%d&uploaded=%llu&downloaded=%llu&left=%llu&event=%s&numwant=%d&compact=1",
       url, http_uri_hex(tptr->info_hash, 20), http_uri_hex(tptr->peer_id, 20),
-      LISTEN_PORT, 0, 0, 10240000, EVENT_STARTED, TRACKER_NUMWANT);
+      LISTEN_PORT, (unsigned long long)tptr->uploaded, (unsigned long long)tptr->downloaded, (unsigned long long)tptr->left, EVENT_STARTED, TRACKER_NUMWANT);
   full_url[sizeof(full_url) - 1] = '\0';
   // printf("url=%s\n", full_url);
 
@@ -92,6 +96,22 @@ static void request_trackers_with_http(const char* url, b_torrent* tptr, b_peer*
   // format response content
   b_buffer* buf = b_buffer_init_with_string(res->content, res->content_length);
   b_encode* be = b_encode_init(buf);
+
+
+  b_dict* bdict = be->data.dpv;
+  while (bdict != NULL) {
+    if (strncmp("peers", bdict->key, max(5, strlen(bdict->key))) == 0) {
+      char *index = bdict->value->data.cpv;
+      for (i = 0; i < bdict->value->len; i += 6) {
+        addr.s_addr = bytes42int(index);
+        port = bytes22int(index);
+        printf("%lu:%s:%d\n", (unsigned long)addr.s_addr, inet_ntoa(addr), port);
+      }
+      bdict->value->len;
+      break;
+    }
+    bdict = bdict->next;
+  }
 
   b_encode_print(be);
 
@@ -113,10 +133,6 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* 
   uint32_t transaction_id = rand();
 
   int i;
-  for (i = 0; i < 16; i++) {
-    printf("%.2x ", buf[i]);
-  }
-  printf("\n");
 
   // socket
   int sockfd = udp_connect_with_url(url);
@@ -158,6 +174,12 @@ static void request_trackers_with_udp(const char* url, b_torrent* tptr, b_peer* 
           end = begin + 4;
           int2byte(begin, end, 0x00);
           int2bytes4(begin, transaction_id);
+
+          for (i = 0; i < 16; i++) {
+            printf("%.2x ", buf[i]);
+          }
+          printf("\n");
+
           UDP_SEND(sockfd, buf);
           printf("write\n");
           break ;
