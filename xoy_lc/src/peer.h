@@ -8,10 +8,13 @@ typedef struct b_peer{
   char ip[16];
   unsigned int port;
 
-  // int16_t am_choking = 1;
-  // int16_t am_interested = 0;
-  // int16_t peer_choking = 1;
-  // int16_t peer_interested = 0;
+  int8_t am_choking = 1;
+  int8_t am_interested = 0;
+  int8_t peer_choking = 1;
+  int8_t peer_interested = 0;
+
+  uint64_t uploaded;
+  uint64_t downloaded;
 
   struct b_peer* next;
 
