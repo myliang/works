@@ -38,16 +38,18 @@ int main (int argc, char const* argv[]) {
   // printf("ta.sizeof=%d\n", sizeof(ta)/sizeof(int));
 
   // sizeof test
-  // char *sa = "abc";
-  // char sb[] = "abc";
-  // char *sc[] = {"abc", "123"};
-  // int *a = &i;
-  // printf("sa.sizeof=%ld\n", sizeof(sa));
-  // printf("sb.sizeof=%ld\n", sizeof(sb));
-  // printf("sc.sizeof=%ld\n", sizeof(sc));
-  // printf("a.sizeof=%ld\n", sizeof(a));
-  // char cn[] = "中国";
-  // printf("cn.sizeof=%ld, cn.strlen=%lu\n", sizeof(cn), strlen(cn));
+  char *sa = "abc";
+  char sb[] = "abc";
+  char *sc[] = {"abc", "123"};
+  char ic = '1';
+  int *a = &i;
+  printf("sa.sizeof=%ld\n", sizeof(sa));
+  printf("sb.sizeof=%ld\n", sizeof(sb));
+  printf("sc.sizeof=%ld\n", sizeof(sc));
+  printf("a.sizeof=%ld\n", sizeof(a));
+  printf("ia.value=%d\n", ic);
+  char cn[] = "中国";
+  printf("cn.sizeof=%ld, cn.strlen=%lu\n", sizeof(cn), strlen(cn));
   // //
   // bitmap test
   bitmap* bm = bitmap_init(2);

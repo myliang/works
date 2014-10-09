@@ -17,27 +17,27 @@
   (((buf)[0] << 8 & 0xffff) + ((buf)[1] & 0xff))
 
 #define int2bytes8(buf, v) \
-  (buf)[0] = v >> 56 & 0xff; \
-  (buf)[1] = v >> 48 & 0xff; \
-  (buf)[2] = v >> 40 & 0xff; \
-  (buf)[3] = v >> 32 & 0xff; \
-  (buf)[4] = v >> 24 & 0xff; \
-  (buf)[5] = v >> 16 & 0xff; \
-  (buf)[6] = v >> 8 & 0xff; \
-  (buf)[7] = v & 0xff
+  (buf)[0] = (v) >> 56 & 0xff; \
+  (buf)[1] = (v) >> 48 & 0xff; \
+  (buf)[2] = (v) >> 40 & 0xff; \
+  (buf)[3] = (v) >> 32 & 0xff; \
+  (buf)[4] = (v) >> 24 & 0xff; \
+  (buf)[5] = (v) >> 16 & 0xff; \
+  (buf)[6] = (v) >> 8 & 0xff; \
+  (buf)[7] = (v) & 0xff
 
 #define int2bytes4(buf, v) \
-  (buf)[0] = v >> 24 & 0xff; \
-  (buf)[1] = v >> 16 & 0xff; \
-  (buf)[2] = v >> 8 & 0xff; \
-  (buf)[3] = v & 0xff
+  (buf)[0] = (v) >> 24 & 0xff; \
+  (buf)[1] = (v) >> 16 & 0xff; \
+  (buf)[2] = (v) >> 8 & 0xff; \
+  (buf)[3] = (v) & 0xff
 
 #define int2bytes2(buf, v) \
-  (buf)[0] = v >> 8 & 0xff; \
-  (buf)[1] = v & 0xff
+  (buf)[0] = (v) >> 8 & 0xff; \
+  (buf)[1] = (v) & 0xff
 
 #define int2byte(buf, v) \
-  (buf)[0] = v & 0xff
+  (buf)[0] = (v) & 0xff
 
 
 #endif /* end of include guard: _CONFIG_H_ */
