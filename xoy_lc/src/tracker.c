@@ -78,8 +78,7 @@ void request_trackers(b_torrent* tptr, int timeout) {
 // static methods
 static int request_trackers_with_http(const char* url, b_torrent* tptr, int timeout) {
   char full_url[1024];
-  struct in_addr addr;
-  int i, port;
+  int i;
   snprintf(full_url, sizeof(full_url) - 1,
       "%s?info_hash=%s&peer_id=%s&port=%d&uploaded=%llu&downloaded=%llu&left=%llu&event=%s&numwant=%d&compact=1",
       url, http_uri_hex(tptr->info_hash, 20), http_uri_hex(tptr->peer_id, 20),
@@ -106,14 +105,7 @@ static int request_trackers_with_http(const char* url, b_torrent* tptr, int time
       b_peer *bpr = &bprhead;
       for (i = 0; i < bdict->value->len; i += 6) {
         // printf("%u.%u.%u.%u\n", (unsigned char)index[i + 0], (unsigned char)index[i + 1], (unsigned char)index[i + 2], (unsigned char)index[i + 3]);
-        addr.s_addr = bytes42int(index + i);
-        port = bytes22int(index + i + 4);
-
-        b_peer *bp1 = b_peer_init();
-        bp1->port = port;
-        memcpy(bp1->ip, inet_ntoa(addr), 16);
-        // printf("%lu:%s:%d\n", (unsigned long)addr.s_addr, bp1->ip, bp1->port);
-
+        b_peer *bp1 = b_peer_init_by_ipport(index + i);
         if (b_peer_contain(tptr->peer, bp1) == 0) {
           bpr = bpr->next = bp1;
           tptr->peer_len++;

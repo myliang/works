@@ -23,7 +23,7 @@ typedef struct b_torrent{
   char* created_by;
   char* encoding;
   char* pieces;
-  int64_t create_date;
+  uint64_t create_date;
   uint64_t piece_size; // bytes of a piece
   uint64_t total_size; // files total bytes
 
@@ -31,9 +31,9 @@ typedef struct b_torrent{
   unsigned char peer_id[20];
 
   b_torrent_tracker* tracker;
-  int tracker_len;
   b_torrent_file* file;
-  int file_len;
+  unsigned int tracker_len;
+  unsigned int file_len;
 
   // upload, download and left bytes
   uint64_t uploaded;
@@ -54,3 +54,4 @@ void b_torrent_store(const char* filename, b_torrent* bt);
 b_torrent* b_torrent_recover(const char* filename);
 
 #endif /* end of include guard: _TORRENT_H_ */
+
