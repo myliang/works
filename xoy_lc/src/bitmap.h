@@ -18,5 +18,6 @@ int bitmap_get(bitmap* bm, uint64_t index);
 void bitmap_set(bitmap* bm, uint64_t index);
 void bitmap_clear(bitmap* bm, uint64_t index);
 void bitmap_print(bitmap* bm);
+void bitmap_compare(int ret[], bitmap* bm1, bitmap* bm2);
 
 #endif /* end of include guard: _BITMAP_H_ */

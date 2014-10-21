@@ -68,3 +68,17 @@ void bitmap_print(bitmap* bm) {
   }
   printf("\n");
 }
+
+void bitmap_compare(int ret[], bitmap* bm1, bitmap* bm2) {
+  int i, j;
+  int bit_masks_len = ARRAY_SIZE(bit_masks, int);
+  for (i = 0; i < bm1->len; i++) {
+    for (j = 0; j < bit_masks_len; j++) {
+      int r1 = bm1->buf[i] & bit_masks[j];
+      int r2 = bm2->buf[i] & bit_masks[j];
+      if (r1 == r2) continue ;
+      if (r1 == 1) ret[0]++;
+      else ret[1]++;
+    }
+  }
+}
