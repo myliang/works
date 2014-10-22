@@ -11,11 +11,17 @@
 
 static int bit_masks[] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
 
-bitmap* bitmap_init(int len) {
+bitmap* bitmap_new(int len) {
   bitmap* bm = malloc(sizeof(bitmap));
   bm->buf = malloc(len);
   bzero(bm->buf, len);
   bm->len = len;
+  return bm;
+}
+
+bitmap* bitmap_init(const char *buf, int len) {
+  bitmap *bm = bitmap_new(len);
+  memcpy(bm->buf, buf, len);
   return bm;
 }
 

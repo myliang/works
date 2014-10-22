@@ -9,7 +9,8 @@ typedef struct {
 } bitmap;
 
 // init , free
-bitmap* bitmap_init(int len);
+bitmap* bitmap_new(int len);
+bitmap* bitmap_init(const char *buf, int len);
 void bitmap_free(bitmap* bm);
 
 // operator

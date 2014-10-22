@@ -10,7 +10,8 @@
 #define PEER_STATE_RECV_HANDSHAKED 1
 #define PEER_STATE_SEND_BITFIELD 2
 #define PEER_STATE_RECV_BITFIELD 3
-#define PEER_STATE_CLOSE 4
+#define PEER_STATE_DATA 4
+#define PEER_STATE_CLOSE 5
 
 typedef struct b_peer{
 
