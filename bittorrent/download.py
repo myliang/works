@@ -197,6 +197,8 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
         doneflag.set()
         if reason is not None:
             errorfunc(reason)
+
+
     rawserver = RawServer(doneflag, config['timeout_check_interval'], config['timeout'], errorfunc = errorfunc, maxconnects = config['max_allow_in'])
     try:
         try:
@@ -256,6 +258,8 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
             max_slice_length, max_rate_period, fudge)
     ratemeasure = RateMeasure(storagewrapper.get_amount_left())
     rm[0] = ratemeasure.data_rejected
+
+
     picker = PiecePicker(len(pieces), config['rarest_first_cutoff'])
     for i in xrange(len(pieces)):
         if storagewrapper.do_I_have(i):
@@ -267,6 +271,8 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
     connecter = Connecter(make_upload, downloader, choker,
         len(pieces), upmeasure, config['max_upload_rate'] * 1024, rawserver.add_task)
     infohash = sha(bencode(info)).digest()
+
+
     encoder = Encoder(connecter, rawserver, 
         myid, config['max_message_length'], rawserver.add_task, 
         config['keepalive_interval'], infohash, config['max_initiate'])

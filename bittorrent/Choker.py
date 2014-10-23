@@ -82,7 +82,7 @@ class Choker:
     def change_max_uploads(self, newval):
         def foo(self=self, newval=newval):
             self._change_max_uploads(newval)
-        self.schedule(foo, 0);
+        self.schedule(foo, 0)
         
     def _change_max_uploads(self, newval):
         self.max_uploads = newval
