@@ -20,6 +20,12 @@ b_peer* b_peer_init () {
   p->peer_choking = 1;
   p->peer_interested = 0;
 
+  p->last_time = 0;
+  p->last_downtime = 0;
+
+  p->uploaded = 0;
+  p->downloaded = 0;
+
   return p;
 }
 

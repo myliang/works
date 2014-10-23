@@ -31,7 +31,7 @@ typedef struct b_peer{
   int state;
 
   time_t last_time;
-  time_t last_recvtime;
+  time_t last_downtime;
 
   bitmap *bitfield;
 

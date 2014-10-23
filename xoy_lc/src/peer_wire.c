@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <poll.h>
+#include <errno.h>
 
 #include "config.h"
 #include "io.h"
@@ -22,23 +24,26 @@
 #define MESSAGE_PIECE 7
 #define MESSAGE_CANCEL 8
 // #define MESSAGE_KEEPALIVE 9
-//
-typedef void (*Function)(const char *buf, b_peer *bp, b_torrent *bt);
 
-static void mrecv_handshake(const char *buf, b_peer *bp, b_torrent *bt);
-static void mrecv_keepalive(const char *buf, b_peer *bp, b_torrent *bt);
-static void mrecv_choke(const char *buf, b_peer *bp, b_torrent *bt);
-static void mrecv_unchoke(const char *buf, b_peer *bp, b_torrent *bt);
-static void mrecv_interested(const char *buf, b_peer *bp, b_torrent *bt);
-static void mrecv_notinterested(const char *buf, b_peer *bp, b_torrent *bt);
-static void mrecv_have(const char *buf, b_peer *bp, b_torrent *bt);
-static void mrecv_bitfield(const char *buf, b_peer *bp, b_torrent *bt);
-static void mrecv_request(const char *buf, b_peer *bp, b_torrent *bt);
-static void mrecv_piece(const char *buf, b_peer *bp, b_torrent *bt);
+#define MAX_POLLFD 1024
+//
+typedef int (*Function)(const char *buf, b_peer *bp, b_torrent *bt);
+
+static int mrecv_handshake(const char *buf, b_peer *bp, b_torrent *bt);
+static int mrecv_keepalive(const char *buf, b_peer *bp, b_torrent *bt);
+static int mrecv_choke(const char *buf, b_peer *bp, b_torrent *bt);
+static int mrecv_unchoke(const char *buf, b_peer *bp, b_torrent *bt);
+static int mrecv_interested(const char *buf, b_peer *bp, b_torrent *bt);
+static int mrecv_notinterested(const char *buf, b_peer *bp, b_torrent *bt);
+static int mrecv_have(const char *buf, b_peer *bp, b_torrent *bt);
+static int mrecv_bitfield(const char *buf, b_peer *bp, b_torrent *bt);
+static int mrecv_request(const char *buf, b_peer *bp, b_torrent *bt);
+static int mrecv_piece(const char *buf, b_peer *bp, b_torrent *bt);
+static int mrecv_cancel(const char *buf, b_peer *bp, b_torrent *bt);
 
 static Function message_functions[] = {
   mrecv_choke, mrecv_unchoke, mrecv_interested, mrecv_notinterested, mrecv_have,
-  mrecv_bitfield, mrecv_request, mrecv_piece
+  mrecv_bitfield, mrecv_request, mrecv_piece, mrecv_cancel
 };
 
 // handshake : <pstrlen><pstr><reserved><info_hash><peer_id>
@@ -72,6 +77,29 @@ static size_t message_cancel(char *dst, uint32_t index, uint32_t begin, uint32_t
 // size_t message_port(char *dst, uint16_t port);
 
 
+void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
+  time_t now;
+  struct pollfd fds[MAX_POLLFD];
+  int maxfd = MAX_POLLFD, nready = 0;
+
+  for (;;) {
+    now = time(NULL);
+
+    // pick peers with unchoked every ten second
+    //
+    // redo pick and option peers with unchoked every 30 second
+    //
+    // request tracker every 5 mintue
+    //
+    // create peer connction
+    nready = poll(fds, maxfd, timeout);
+    if (nready == 0) continue;
+    else if (nready < 0) {
+      fprintf(stderr, "%s:%d poll eror %s\n", __FILE__, __LINE__, strerror(errno));
+      break;
+    }
+  }
+}
 
 void b_peer_wire_message(b_torrent *bt) {
   b_peer *bp = bt->peer;
@@ -110,17 +138,30 @@ int b_peer_wire_send_message(b_peer* bp, b_torrent *bt) {
   }
 
   // if recv
+  if (bp->am_choking == 0) {
+    // upload
+  }
+
+  time_t now = time(NULL);
+  long interval = now = bp->last_time;
+  if (interval > 180) {
+    bp->state = PEER_STATE_CLOSE;
+    close(bp->sockfd);
+  } else if(interval > 45) {
+    len = message_keepalive(buf);
+    io_writen(bp->sockfd, buf, len);
+  }
 
   return 0;
 }
 
 int b_peer_wire_recv_message(b_peer* bp, const char *buf, b_torrent *bt) {
   if (buf[0] == 19 && strncmp(buf + 1, bittorrent_protocol, 19) == 0) {
-    mrecv_handshake(buf, bp, bt);
+    return mrecv_handshake(buf, bp, bt);
   } else if (bytes42int(buf) == 0) {
-    mrecv_keepalive(buf, bp, bt);
+    return mrecv_keepalive(buf, bp, bt);
   } else if (message_functions[buf[4]] != NULL) {
-    message_functions[buf[4]](buf, bp, bt);
+    return message_functions[buf[4]](buf, bp, bt);
   } else {
     fprintf(stderr, "recv message error\n");
     return -1;
@@ -130,11 +171,11 @@ int b_peer_wire_recv_message(b_peer* bp, const char *buf, b_torrent *bt) {
 }
 
 // message recv
-static void mrecv_handshake(const char *buf, b_peer *bp, b_torrent *bt) {
+static int mrecv_handshake(const char *buf, b_peer *bp, b_torrent *bt) {
   if (strncmp(buf + 20, bt->info_hash, 20) != 0) {
     bp->state = PEER_STATE_CLOSE;
     close(bp->sockfd);
-    return ;
+    return 68;
   }
 
   char sendbuf[100];
@@ -142,25 +183,27 @@ static void mrecv_handshake(const char *buf, b_peer *bp, b_torrent *bt) {
   memcpy(bp->id, buf + 48, 20);
   if (bp->state == PEER_STATE_INIT) {
     len = message_handshake(sendbuf, bt->info_hash, bt->peer_id);
-    if (io_writen(bp->sockfd, sendbuf, len) < 0) return ;
-    bp->state = PEER_STATE_SEND_HANDSHAKED;
+    if (io_writen(bp->sockfd, sendbuf, len) < 0) return 68;
   }
   bp->state = PEER_STATE_RECV_HANDSHAKED;
   UPDATE_LAST_TIME(bp);
+  return 68;
 }
-static void mrecv_keepalive(const char *buf, b_peer *bp, b_torrent *bt) {
+static int mrecv_keepalive(const char *buf, b_peer *bp, b_torrent *bt) {
   UPDATE_LAST_TIME(bp);
+  return 4;
 }
-static void mrecv_choke(const char *buf, b_peer *bp, b_torrent *bt) {
-  if (bp->peer_choking == 0) {
+static int mrecv_choke(const char *buf, b_peer *bp, b_torrent *bt) {
+  if (bp->state == PEER_STATE_DATA && bp->peer_choking == 0) {
     bp->peer_choking = 1;
     bp->last_recvtime = 0;
     bp->downloaded = 0;
   }
   UPDATE_LAST_TIME(bp);
+  return 5;
 }
-static void mrecv_unchoke(const char *buf, b_peer *bp, b_torrent *bt) {
-  if (bp->peer_choking == 1) {
+static int mrecv_unchoke(const char *buf, b_peer *bp, b_torrent *bt) {
+  if (bp->state == PEER_STATE_DATA && bp->peer_choking == 1) {
     bp->peer_choking = 0;
     if (bp->am_interested == 0) {
       int ret[] = {0, 0};
@@ -176,26 +219,38 @@ static void mrecv_unchoke(const char *buf, b_peer *bp, b_torrent *bt) {
     bp->downloaded = 0;
   }
   UPDATE_LAST_TIME(bp);
+  return 5;
 }
-static void mrecv_interested(const char *buf, b_peer *bp, b_torrent *bt) {
+static int mrecv_interested(const char *buf, b_peer *bp, b_torrent *bt) {
   int ret[] = {0, 0};
-  bitmap_compare(ret, bp->bitfield, bt->bitfield);
-  if (ret[1] > 0) bp->peer_interested = 1;
-  if (bp->peer_interested == 0) return ;
-  if (bp->am_choking == 0) {
-    // send interested
+  char sendbuf[100];
+  int len;
+
+  if (bp->state == PEER_STATE_DATA) {
+    bitmap_compare(ret, bp->bitfield, bt->bitfield);
+    if (ret[1] > 0) bp->peer_interested = 1;
+    if (bp->peer_interested == 0) return 5;
+    if (bp->am_choking == 0) {
+      // send unchoke
+      len = message_unchoke(sendbuf);
+      io_writen(bp->sockfd, buf, len);
+    }
   }
   UPDATE_LAST_TIME(bp);
+  return 5;
 }
-static void mrecv_notinterested(const char *buf, b_peer *bp, b_torrent *bt) {
-  bp->peer_interested = 0;
+static int mrecv_notinterested(const char *buf, b_peer *bp, b_torrent *bt) {
+  if (bp->state == PEER_STATE_DATA)
+    bp->peer_interested = 0;
   // cancel requested
   UPDATE_LAST_TIME(bp);
+  return 5;
 }
-static void mrecv_have(const char *buf, b_peer *bp, b_torrent *bt) {
-  int rnum;
+static int mrecv_have(const char *buf, b_peer *bp, b_torrent *bt) {
+  int rnum, len;
   int ret[] = {0, 0};
   srand_curr_time;
+  char sendbuf[100];
 
   rnum = rand() % 3;
   if (bp->state == PEER_STATE_DATA) {
@@ -205,15 +260,20 @@ static void mrecv_have(const char *buf, b_peer *bp, b_torrent *bt) {
       if (ret[1] > 0){
         bp->am_interested = 1;
         // send interested message
+        len = message_interested(sendbuf);
+        io_writen(bp->sockfd, sendbuf, len);
       }
     } else {
-      if (rnum = 0)
-        ;// send interested message
+      if (rnum == 0){
+        len = message_interested(sendbuf);
+        io_writen(bp->sockfd, sendbuf, len);
+      }
     }
   }
   UPDATE_LAST_TIME(bp);
+  return 9;
 }
-static void mrecv_bitfield(const char *buf, b_peer *bp, b_torrent *bt) {
+static int mrecv_bitfield(const char *buf, b_peer *bp, b_torrent *bt) {
   int bitlen = bt->bitfield->len;
   int ret[] = {0, 0};
   int len;
@@ -227,7 +287,7 @@ static void mrecv_bitfield(const char *buf, b_peer *bp, b_torrent *bt) {
     if (bytes42int(buf) - 1 != bitlen) {
       bp->state = PEER_STATE_CLOSE;
       close(bp->sockfd);
-      return ;
+      return 5 + bitlen;
     }
 
     bp->bitfield = bitmap_init(buf + 5, bitlen);
@@ -236,11 +296,11 @@ static void mrecv_bitfield(const char *buf, b_peer *bp, b_torrent *bt) {
     if (bp->state == PEER_STATE_RECV_HANDSHAKED) {
       len = message_bitfield(sendbuf, bt->bitfield);
       io_writen(bp->sockfd, sendbuf, len);
-      bp->state = PEER_STATE_DATA;
+      // bp->state = PEER_STATE_DATA;
     }
 
-    if (bp->state == PEER_STATE_SEND_BITFIELD)
-      bp->state = PEER_STATE_DATA;
+    // if (bp->state == PEER_STATE_SEND_BITFIELD)
+    bp->state = PEER_STATE_DATA;
 
     // interested
     bitmap_compare(ret, bp->bitfield, bt->bitfield);
@@ -252,14 +312,33 @@ static void mrecv_bitfield(const char *buf, b_peer *bp, b_torrent *bt) {
     if (ret[1] > 0) bp->peer_interested = 1;
   }
   UPDATE_LAST_TIME(bp);
+  return 5 + len;
 }
-static void mrecv_request(const char *buf, b_peer *bp, b_torrent *bt) {
-  // todo
+static int mrecv_request(const char *buf, b_peer *bp, b_torrent *bt) {
+  // todo reqeust quene
   UPDATE_LAST_TIME(bp);
+  return 17;
 }
-static void mrecv_piece(const char *buf, b_peer *bp, b_torrent *bt) {
+static int mrecv_piece(const char *buf, b_peer *bp, b_torrent *bt) {
   // todo
+  if (bp->am_choking == 0 && bp->peer_interested == 1) {
+    uint32_t index = bytes42int(buf + 5);
+    uint32_t begin = bytes42int(buf + 9);
+    uint32_t length = bytes42int(buf + 1333);
+    //
+    if (bp->last_downtime == 0) bp->last_downtime = time(NULL);
+    bp->downloaded += length;
+
+    // wirte buff
+    // continue request
+  }
+
   UPDATE_LAST_TIME(bp);
+  return 13;
+}
+static int mrecv_cancel(const char *buf, b_peer *bp, b_torrent *bt) {
+  UPDATE_LAST_TIME(bp);
+  return 17;
 }
 
 // static methods

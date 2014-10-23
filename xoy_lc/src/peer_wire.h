@@ -9,6 +9,7 @@
 
 // message change download or upload
 void b_peer_wire_message(b_torrent *bt);
+void b_peer_wire_downup_message(b_torrent *bt, int timeout);
 
 int b_peer_wire_send_message(b_peer* bp, b_torrent *bt);
 int b_peer_wire_recv_message(b_peer* bp, const char *buf, b_torrent *bt);
