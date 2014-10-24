@@ -3,31 +3,52 @@
 
 from CurrentRateMeasure import Measure
 
+# 上传数据类
 class Upload:
     def __init__(self, connection, choker, storage, 
             max_slice_length, max_rate_period, fudge):
+
+        # sock connection
         self.connection = connection
         self.choker = choker
         self.storage = storage
+        # 最大slice
         self.max_slice_length = max_slice_length
+        # 最大速率间距
         self.max_rate_period = max_rate_period
+
+        # local choke remote
         self.choked = True
+        # remote not interested  local
         self.interested = False
+
+        # 缓存
         self.buffer = []
+
+        # 测速对象
         self.measure = Measure(max_rate_period, fudge)
+
+        # 如果存储了数据，那么发送bitfield
         if storage.do_I_have_anything():
             connection.send_bitfield(storage.get_have_list())
 
+    # 处理收到的不感兴趣消息
     def got_not_interested(self):
         if self.interested:
             self.interested = False
+            # 删除缓存数据
             del self.buffer[:]
+
+            # remote 对Local不感兴趣，重新rechoke
             self.choker.not_interested(self.connection)
 
+    # 处理收到的感兴趣的消息
     def got_interested(self):
         if not self.interested:
             self.interested = True
+            # remote is interested local, and rechoke
             self.choker.interested(self.connection)
+
 
     def flushed(self):
         while len(self.buffer) > 0 and self.connection.is_flushed():
@@ -54,6 +75,7 @@ class Upload:
         except ValueError:
             pass
 
+    #
     def choke(self):
         if not self.choked:
             self.choked = True
