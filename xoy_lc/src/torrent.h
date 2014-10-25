@@ -40,6 +40,8 @@ typedef struct b_torrent{
   uint64_t downloaded;
   uint64_t left;
 
+  bitmap *bitfield;
+
   b_peer* peer;
   int peer_len;
 

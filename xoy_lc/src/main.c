@@ -65,6 +65,8 @@ int main (int argc, char const* argv[]) {
 
   // tracker
   request_trackers(btp, 100);
+
+  // peer
   b_torrent_print(btp);
 
   b_encode_free(bp, buf);

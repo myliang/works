@@ -82,7 +82,7 @@ static int request_trackers_with_http(const char* url, b_torrent* tptr, int time
   snprintf(full_url, sizeof(full_url) - 1,
       "%s?info_hash=%s&peer_id=%s&port=%d&uploaded=%llu&downloaded=%llu&left=%llu&event=%s&numwant=%d&compact=1",
       url, http_uri_hex(tptr->info_hash, 20), http_uri_hex(tptr->peer_id, 20),
-      LISTEN_PORT, (unsigned long long)tptr->uploaded, (unsigned long long)tptr->downloaded, (unsigned long long)tptr->left, EVENT_STARTED, TRACKER_NUMWANT);
+      BT_LISTEN_PORT, (unsigned long long)tptr->uploaded, (unsigned long long)tptr->downloaded, (unsigned long long)tptr->left, EVENT_STARTED, TRACKER_NUMWANT);
   full_url[sizeof(full_url) - 1] = '\0';
   // printf("url=%s\n", full_url);
 

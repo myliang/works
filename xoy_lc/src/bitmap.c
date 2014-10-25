@@ -11,11 +11,17 @@
 
 static int bit_masks[] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
 
-bitmap* bitmap_init(int len) {
+bitmap* bitmap_new(int len) {
   bitmap* bm = malloc(sizeof(bitmap));
   bm->buf = malloc(len);
   bzero(bm->buf, len);
   bm->len = len;
+  return bm;
+}
+
+bitmap* bitmap_init(const char *buf, int len) {
+  bitmap *bm = bitmap_new(len);
+  memcpy(bm->buf, buf, len);
   return bm;
 }
 
@@ -67,4 +73,18 @@ void bitmap_print(bitmap* bm) {
     printf("%.2x ", c);
   }
   printf("\n");
+}
+
+void bitmap_compare(int ret[], bitmap* bm1, bitmap* bm2) {
+  int i, j;
+  int bit_masks_len = ARRAY_SIZE(bit_masks, int);
+  for (i = 0; i < bm1->len; i++) {
+    for (j = 0; j < bit_masks_len; j++) {
+      int r1 = bm1->buf[i] & bit_masks[j];
+      int r2 = bm2->buf[i] & bit_masks[j];
+      if (r1 == r2) continue ;
+      if (r1 == 1) ret[0]++;
+      else ret[1]++;
+    }
+  }
 }

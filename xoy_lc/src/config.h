@@ -3,8 +3,6 @@
 
 #include <time.h>
 
-#define LISTEN_PORT 6881
-
 #define srand_curr_time srand(time(NULL))
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -39,5 +37,13 @@
 #define int2byte(buf, v) \
   (buf)[0] = (v) & 0xff
 
+// bittorrent
+#define BT_LISTEN_PORT 6881
+// max connections num of torrent
+#define BT_TORRENT_MAX_CONNECTIONS 10
+// 16K
+#define BT_PIECE_BLOCK_LEN 0x4000
+// protocol
+static char bittorrent_protocol[] = "BitTorrent protocol";
 
 #endif /* end of include guard: _CONFIG_H_ */

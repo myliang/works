@@ -2,15 +2,30 @@
 #include <stdio.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #include "peer.h"
 #include "config.h"
+#include "io.h"
 
 
 b_peer* b_peer_init () {
   b_peer* p = malloc(sizeof(b_peer));
 
   p->next = NULL;
+  p->state = PEER_STATE_INIT;
+
+  p->am_choking = 1;
+  p->am_interested = 0;
+  p->peer_choking = 1;
+  p->peer_interested = 0;
+
+  p->last_time = 0;
+  p->last_downtime = 0;
+
+  p->uploaded = 0;
+  p->downloaded = 0;
+
   return p;
 }
 
@@ -37,4 +52,5 @@ b_peer* b_peer_init_by_ipport (const char* src) {
 void b_peer_free(b_peer* p) {
   free(p);
 }
+
 

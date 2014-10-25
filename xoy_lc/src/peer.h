@@ -2,11 +2,22 @@
 #define _PEER_H_
 
 #include <stdint.h>
+#include <time.h>
+#include "bitmap.h"
+
+#define PEER_STATE_INIT -1
+#define PEER_STATE_SEND_HANDSHAKED 0
+#define PEER_STATE_RECV_HANDSHAKED 1
+#define PEER_STATE_SEND_BITFIELD 2
+#define PEER_STATE_RECV_BITFIELD 3
+#define PEER_STATE_DATA 4
+#define PEER_STATE_CLOSE 5
 
 typedef struct b_peer{
 
   char ip[16];
   unsigned int port;
+  char id[20];
 
   int8_t am_choking;
   int8_t am_interested;
@@ -15,6 +26,14 @@ typedef struct b_peer{
 
   uint64_t uploaded;
   uint64_t downloaded;
+
+  int sockfd;
+  int state;
+
+  time_t last_time;
+  time_t last_downtime;
+
+  bitmap *bitfield;
 
   struct b_peer* next;
 

@@ -1,0 +1,99 @@
+bin/main
+doc/How_to_Train_Your_Dragon_2.torrent
+start:::
+torrent: 
+    name: 驯龙高手2.How.to.Train.Your.Dragon.2.2014.HD1080P.X264.AAC.English.CHS-ENG.Mp4Ba
+    created by: BitComet/1.35
+    encoding: UTF-8
+    create date: 1409656928
+    piece size: 524288
+    peer id: -XOY1000-1606892971
+    total_size: 3825205370
+    uploaded: 0
+    downloaded: 0
+    left: 3825205370
+    info_hash: 47fe6dfc531f88f487906e858a4c9bd969b61432
+    trackers: 36
+      http://bt.mp4ba.com:2710/announce
+      udp://tracker.openbittorrent.com:80/announce
+      udp://tracker.publicbt.com:80/announce
+      udp://tracker.istole.it:80/announce
+      http://trackers.ibzu.me/announce.php
+      http://tracker1.torrentino.com/announce
+      http://tracker2.torrentino.com/announce
+      http://tracker3.torrentino.com/announce
+      http://bt.careland.com.cn:6969/announce
+      http://bt2.careland.com.cn:6969/announce
+      http://bt3.careland.com.cn:6969/announce
+      http://94.228.192.98/announce
+      http://121.14.98.151:9090/announce
+      http://henbt.com:2710/announce
+      http://server1.9sheng.cn:6969/announce
+      http://anisaishuu.de:2710/announce
+      udp://explodie.org:6969/announce
+      udp://tracker.leechers-paradise.org:6969/announce
+      http://tracker.shuntv.net/announce.php
+      http://tracker.tvunderground.org.ru:3218/announce
+      udp://eddie4.nl:6969/announce
+      http://tracker2.wasabii.com.tw:6969/announce
+      udp://mgtracker.org:2710/announce
+      udp://shadowshq.yi.org:6969/announce
+      udp://shadowshq.eddie4.nl:6969/announce
+      udp://10.rarbg.me:80/announce
+      udp://9.rarbg.com:2710/announce
+      udp://tracker.yify-torrents.com/announce
+      udp://tracker.coppersurfer.tk:6969/announce
+      http://siambit.org/announce.php
+      udp://open.demonii.com:1337/announce
+      udp://tracker.torrenty.org:6969/announce
+      http://tracker.torrenty.org:6969/announce
+      udp://tracker.publichd.eu:80/announce
+      http://tracker.pimp4003.net/announce
+      http://tracker.xfsub.com:6868/announce
+    files: 5
+      XL高手2.How.to.Train.Your.Dragon.2.2014.HD1080P.X264.AAC.English.CHS-ENG.Mp4Ba.mp4[3824639005]
+      _____padding_file_0_如果您看到此文件，请升级到BitComet(比特彗星)0.85或以上版本____[41955]
+      更多高清请访问www.mp4ba.com.txt[27]
+      _____padding_file_1_如果您看到此文件，请升级到BitComet(比特彗星)0.85或以上版本____[524261]
+      点击进入高清MP4ba.url[122]
+    peer: 0
+      :0
+    comment: (null)
+is seted count: 0
+index == 9 value:0
+is seted count: 1
+index == 9 value:1
+is seted count: 0
+index == 9 value:0
+tracker url: http://bt.mp4ba.com:2710/announce
+http.host = bt.mp4ba.com, http.port = 2710, http.path = /announce, http.query = info_hash=%47%fe%6d%fc%53%1f%88%f4%87%90%6e%85%8a%4c%9b%d9%69%b6%14%32&peer_id=%2d%58%4f%59%31%30%30%30%2d%31%36%30%36%38%39%32%39%37%31%00&port=6881&uploaded=0&downloaded=0&left=3825205370&event=started&numwant=100&compact=1
+request:
+GET /announce?info_hash=%47%fe%6d%fc%53%1f%88%f4%87%90%6e%85%8a%4c%9b%d9%69%b6%14%32&peer_id=%2d%58%4f%59%31%30%30%30%2d%31%36%30%36%38%39%32%39%37%31%00&port=6881&uploaded=0&downloaded=0&left=3825205370&event=started&numwant=100&compact=1 HTTP/1.1
+host: bt.mp4ba.com
+
+
+response status line:
+HTTP/1.0 200 OK
+
+
+
+tracker url: udp://tracker.openbittorrent.com:80/announce
+host = tracker.openbittorrent.com, port = 80
+maxfd = 4, nready = 1, rwflag = 0
+00 00 04 17 27 10 19 80 00 00 00 00 4d cb 31 31 
+write
+maxfd = 4, nready = 0, rwflag = 1
+tracker url: udp://tracker.publicbt.com:80/announce
+host = tracker.publicbt.com, port = 80
+maxfd = 4, nready = 1, rwflag = 0
+00 00 04 17 27 10 19 80 00 00 00 00 25 ed 14 42 
+write
+maxfd = 4, nready = 0, rwflag = 1
+tracker url: udp://tracker.istole.it:80/announce
+host = tracker.istole.it, port = 80
+maxfd = 4, nready = 1, rwflag = 0
+00 00 04 17 27 10 19 80 00 00 00 00 11 d2 e0 ff 
+write
+maxfd = 4, nready = 0, rwflag = 1
+tracker url: http://trackers.ibzu.me/announce.php
+http.host = trackers.ibzu.me, http.port = 80, http.path = /announce.php, http.query = 
