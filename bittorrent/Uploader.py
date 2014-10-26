@@ -50,52 +50,75 @@ class Upload:
             self.choker.interested(self.connection)
 
 
+    # flushed buffer and send message
     def flushed(self):
+        # if the buffer len great zero and connection buffer is zero
         while len(self.buffer) > 0 and self.connection.is_flushed():
             index, begin, length = self.buffer[0]
             del self.buffer[0]
+            # read piece from disk
             piece = self.storage.get_piece(index, begin, length)
+            # if piece is not readed, so close connection
             if piece is None:
                 self.connection.close()
                 return
+            # updat rate
             self.measure.update_rate(len(piece))
+            # send piece
             self.connection.send_piece(index, begin, piece)
 
+    # 处理收到的请求消息
     def got_request(self, index, begin, length):
+        #如果remote is not interested local or request len gt max slice length (16K)
+        # so close conn
         if not self.interested or length > self.max_slice_length:
             self.connection.close()
             return
+
+        # if local choked remote
+        # add request to buffer, and flushed buffer
         if not self.choked:
             self.buffer.append((index, begin, length))
             self.flushed()
 
+    # got cancel message received
     def got_cancel(self, index, begin, length):
         try:
+            # remove request message from buffer
             self.buffer.remove((index, begin, length))
         except ValueError:
             pass
 
-    #
+    # send choke
     def choke(self):
+        # if local unchoked remote
+        # and choke it
         if not self.choked:
             self.choked = True
+            # clean buffer
             del self.buffer[:]
+            # send choke to remoate
             self.connection.send_choke()
 
+    # send unchoke
     def unchoke(self):
         if self.choked:
             self.choked = False
             self.connection.send_unchoke()
-        
+
+    # local is choked remote
     def is_choked(self):
         return self.choked
-        
+
+    # remote is interested local
     def is_interested(self):
         return self.interested
 
+    # has data or not in buffer
     def has_queries(self):
         return len(self.buffer) > 0
 
+    # get update rate
     def get_rate(self):
         return self.measure.get_rate()
 

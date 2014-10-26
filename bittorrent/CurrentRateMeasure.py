@@ -14,9 +14,9 @@ class Measure:
 
         # 最后计算速率的时间
         self.last = self.ratesince
-        # 速率
+        # 速率（1 s bytes）
         self.rate = 0.0
-        # 字节数
+        # 总字节数
         self.total = 0l
 
     # 更新速率

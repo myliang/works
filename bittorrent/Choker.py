@@ -1,6 +1,6 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
-
+# -*- coding:utf-8 -*-
 from random import randrange
 
 # 阻塞策略
@@ -16,7 +16,7 @@ class Choker:
         self.done = done
         schedule(self._round_robin, 10)
     
-	# 自动运行任务 
+	  # 自动运行任务
     def _round_robin(self):
 		# 下一个10s运行此方法
         self.schedule(self._round_robin, 10)

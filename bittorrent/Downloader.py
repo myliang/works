@@ -10,15 +10,27 @@ class SingleDownload:
     def __init__(self, downloader, connection):
         self.downloader = downloader
         self.connection = connection
+        # remote choked local
         self.choked = True
+        # local is not interest remote
         self.interested = False
+
+        # active request list
         self.active_requests = []
+
+        # measure down rate
         self.measure = Measure(downloader.max_rate_period)
+
+        # bitfield
         self.have = Bitfield(downloader.numpieces)
+
         self.last = 0
+
         self.example_interest = None
 
+    # disconnected
     def disconnected(self):
+        # remove self from downloads array
         self.downloader.downloads.remove(self)
         for i in xrange(len(self.have)):
             if self.have[i]:
@@ -231,21 +243,29 @@ class SingleDownload:
     def is_snubbed(self):
         return time() - self.last > self.downloader.snub_time
 
+# downloader
 class Downloader:
     def __init__(self, storage, picker, backlog, max_rate_period, numpieces, 
             downmeasure, snub_time, measurefunc = lambda x: None):
         self.storage = storage
         self.picker = picker
         self.backlog = backlog
+        # max rate period (second)
         self.max_rate_period = max_rate_period
+        # cal download rate
         self.downmeasure = downmeasure
+        # the pieces
         self.numpieces = numpieces
+        # is snub time
         self.snub_time = snub_time
         self.measurefunc = measurefunc
+
+        # download object array
         self.downloads = []
 
     def make_download(self, connection):
         self.downloads.append(SingleDownload(self, connection))
+        # return last element
         return self.downloads[-1]
 
 class DummyPicker:

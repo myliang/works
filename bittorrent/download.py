@@ -244,30 +244,40 @@ def download(params, filefunc, statusfunc, finfunc, errorfunc, doneflag, cols, p
         errorfunc("Couldn't listen - " + str(e))
         return
 
+    #
     choker = Choker(config['max_uploads'], rawserver.add_task, finflag.isSet, 
         config['min_uploads'])
-    upmeasure = Measure(config['max_rate_period'], 
+
+    # upload rate
+    upmeasure = Measure(config['max_rate_period'],
         config['upload_rate_fudge'])
+
+    # download rate
     downmeasure = Measure(config['max_rate_period'])
-    def make_upload(connection, choker = choker, 
+
+    def make_upload(connection, choker = choker,
             storagewrapper = storagewrapper, 
             max_slice_length = config['max_slice_length'],
             max_rate_period = config['max_rate_period'],
             fudge = config['upload_rate_fudge']):
         return Upload(connection, choker, storagewrapper, 
             max_slice_length, max_rate_period, fudge)
+
     ratemeasure = RateMeasure(storagewrapper.get_amount_left())
     rm[0] = ratemeasure.data_rejected
 
 
     picker = PiecePicker(len(pieces), config['rarest_first_cutoff'])
+
     for i in xrange(len(pieces)):
         if storagewrapper.do_I_have(i):
             picker.complete(i)
+
     downloader = Downloader(storagewrapper, picker,
         config['request_backlog'], config['max_rate_period'],
         len(pieces), downmeasure, config['snub_time'], 
         ratemeasure.data_came_in)
+
     connecter = Connecter(make_upload, downloader, choker,
         len(pieces), upmeasure, config['max_upload_rate'] * 1024, rawserver.add_task)
     infohash = sha(bencode(info)).digest()

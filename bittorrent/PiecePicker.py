@@ -6,25 +6,44 @@ from random import randrange, shuffle, choice
 class PiecePicker:
     def __init__(self, numpieces, rarest_first_cutoff = 1):
         self.rarest_first_cutoff = rarest_first_cutoff
+        # torrent piece nums
         self.numpieces = numpieces
+        #  array array with index from 0 to numpieces - 1
         self.interests = [range(numpieces)]
+        #  array with index from 0 to numpieces - 1
         self.pos_in_interests = range(numpieces)
+        # array with index is zero
         self.numinterests = [0] * numpieces
+
         self.started = []
+
         self.seedstarted = []
+        # download piece nums
         self.numgot = 0
+
         self.scrambled = range(numpieces)
+
+        # rand sort
         shuffle(self.scrambled)
 
+    # got have message
     def got_have(self, piece):
+        # if piece is in numinterestes
         if self.numinterests[piece] is None:
             return
+        # piece num with got have message
         numint = self.numinterests[piece]
+
+        # if numint == 0
         if numint == len(self.interests) - 1:
+            # append []
             self.interests.append([])
+        # numint += 1
         self.numinterests[piece] += 1
+        # ???
         self._shift_over(piece, self.interests[numint], self.interests[numint + 1])
 
+    # lost have message when conn is closed
     def lost_have(self, piece):
         if self.numinterests[piece] is None:
             return
@@ -32,10 +51,15 @@ class PiecePicker:
         self.numinterests[piece] -= 1
         self._shift_over(piece, self.interests[numint], self.interests[numint - 1])
 
+    # shift over
     def _shift_over(self, piece, l1, l2):
+
         p = self.pos_in_interests[piece]
+        # p = piece;
+
         l1[p] = l1[-1]
         self.pos_in_interests[l1[-1]] = p
+
         del l1[-1]
         newp = randrange(len(l2) + 1)
         if newp == len(l2):
@@ -48,15 +72,19 @@ class PiecePicker:
             l2[newp] = piece
             self.pos_in_interests[piece] = newp
 
+    # request started
     def requested(self, piece, seed = False):
         if piece not in self.started:
             self.started.append(piece)
         if seed and piece not in self.seedstarted:
             self.seedstarted.append(piece)
 
+    # complete piece
     def complete(self, piece):
         assert self.numinterests[piece] is not None
+
         self.numgot += 1
+
         l = self.interests[self.numinterests[piece]]
         p = self.pos_in_interests[piece]
         l[p] = l[-1]
@@ -96,9 +124,11 @@ class PiecePicker:
                     return j
         return None
 
+    # is completed or not
     def am_I_complete(self):
         return self.numgot == self.numpieces
 
+    #
     def bump(self, piece):
         l = self.interests[self.numinterests[piece]]
         pos = self.pos_in_interests[piece]

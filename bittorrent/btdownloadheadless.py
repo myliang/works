@@ -3,7 +3,7 @@
 # Written by Bram Cohen
 # see LICENSE.txt for license information
 
-from BitTorrent.download import download
+import download
 from threading import Event
 from os.path import abspath
 from sys import argv, stdout

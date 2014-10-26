@@ -23,47 +23,67 @@ class SingleSocket:
     def __init__(self, raw_server, sock, handler):
         self.raw_server = raw_server
         self.socket = sock
+        # handler
         self.handler = handler
         self.buffer = []
+        # last time
         self.last_hit = time()
+        # int fd
         self.fileno = sock.fileno()
+        # not connected
         self.connected = False
-        
+
+    # remote ip
     def get_ip(self):
         try:
             return self.socket.getpeername()[0]
         except socket.error:
             return 'no connection'
-        
+
+    # close connect
     def close(self):
         sock = self.socket
         self.socket = None
+        #clean buffer
         self.buffer = []
+
+        # del element from single sockets
         del self.raw_server.single_sockets[self.fileno]
+        # del sock from rlist, wlist
         self.raw_server.poll.unregister(sock)
         sock.close()
 
+    # shutdown
     def shutdown(self, val):
         self.socket.shutdown(val)
 
+    # buffer.len == 0
     def is_flushed(self):
         return len(self.buffer) == 0
 
+    # write message
     def write(self, s):
         assert self.socket is not None
+        #
         self.buffer.append(s)
+        # ????
         if len(self.buffer) == 1:
             self.try_write()
 
+    # try write
     def try_write(self):
         if self.connected:
             try:
+                # buffer has message
                 while self.buffer != []:
+                    # send buffer[0]
                     amount = self.socket.send(self.buffer[0])
+                    # send message eq buf[0]
                     if amount != len(self.buffer[0]):
                         if amount != 0:
                             self.buffer[0] = self.buffer[0][amount:]
                         break
+                    # del buff[0]
                     del self.buffer[0]
             except socket.error, e:
                 code, msg = e
@@ -81,27 +101,39 @@ def default_error_handler(x):
 class RawServer:
     def __init__(self, doneflag, timeout_check_interval, timeout, noisy = True,
             errorfunc = default_error_handler, maxconnects = 55):
+        # timeout check interval
         self.timeout_check_interval = timeout_check_interval
+        # timeout
         self.timeout = timeout
         self.poll = poll()
         # {socket: SingleSocket}
         self.single_sockets = {}
+        # dead from write
         self.dead_from_write = []
         self.doneflag = doneflag
         self.noisy = noisy
         self.errorfunc = errorfunc
+        # max connections
         self.maxconnects = maxconnects
+
         self.funcs = []
+        # unscheduled_tasks task list
         self.unscheduled_tasks = []
+
+        # add task to task list
         self.add_task(self.scan_for_timeouts, timeout_check_interval)
 
+    # add task to unscheduled tasks with params function, delay time
     def add_task(self, func, delay):
         self.unscheduled_tasks.append((func, delay))
 
     def scan_for_timeouts(self):
         self.add_task(self.scan_for_timeouts, self.timeout_check_interval)
+
         t = time() - self.timeout
+
         tokill = []
+        # close socket
         for s in self.single_sockets.values():
             if s.last_hit < t:
                 tokill.append(s)
@@ -200,6 +232,7 @@ class RawServer:
         try:
             while not self.doneflag.isSet():
                 try:
+                    # got unschedule task
                     self.pop_unscheduled()
                     if len(self.funcs) == 0:
                         period = 2 ** 30
@@ -255,7 +288,9 @@ class RawServer:
                 ss.close()
             self.server.close()
 
+    # close dead
     def _close_dead(self):
+        # close sock again
         while len(self.dead_from_write) > 0:
             old = self.dead_from_write
             self.dead_from_write = []
@@ -263,6 +298,7 @@ class RawServer:
                 if s.socket is not None:
                     self._close_socket(s)
 
+    # close socket
     def _close_socket(self, s):
         sock = s.socket.fileno()
         s.socket.close()
