@@ -82,9 +82,10 @@ static size_t message_cancel(char *dst, uint32_t index, uint32_t begin, uint32_t
 void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
   time_t now;
   struct pollfd fds[MAX_POLLFD];
-  int maxfd = MAX_POLLFD, nready = 0, i, connfd;
+  int pollfdlen = MAX_POLLFD, nready = 0, i, connfd, nread = 0;
   socklen_t clilen;
   struct sockaddr_in cliaddr;
+  char readbuff[BT_PEER_WIRE_READBUFF_LEN];
 
   int listenfd = io_tcp_listen("localhost", BT_LISTEN_PORT);
   fds[0].fd = listenfd;
@@ -94,7 +95,7 @@ void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
     fds[i].fd = -1;
   }
 
-  maxfd = 0;
+  pollfdlen = 1;
 
   for (;;) {
     now = time(NULL);
@@ -106,19 +107,63 @@ void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
     // request tracker every 5 mintue
     //
     // create peer connction
-    nready = poll(fds, maxfd + 1, timeout);
+    nready = poll(fds, pollfdlen, timeout);
     if (nready == 0) continue;
     else if (nready < 0) {
       fprintf(stderr, "%s:%d poll eror %s\n", __FILE__, __LINE__, strerror(errno));
       break;
     }
 
-    //
     if (fds[0].revents & POLLIN) {
       clilen = sizeof(cliaddr);
       connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &clilen);
       if (connfd < 0) continue;
       printf("%s:%d accept client.ip=%s, client.port=%d", __FILE__, __LINE__, inet_ntoa(cliaddr.sin_addr), cliaddr.sin_port);
+
+      for (i = 1; i < MAX_POLLFD; i++) {
+        if (fds[i].fd < 0) {
+          fds[i].fd = connfd;
+          fds[i].events = POLLIN;
+          break ;
+        }
+      }
+
+      if (i == MAX_POLLFD) {
+        printf("too many connection\n");
+        continue ;
+      }
+
+      if (i > pollfdlen)
+        pollfdlen = i;
+
+      if (--nready <= 0)
+        continue ;
+    }
+
+    for (i = 1; i < pollfdlen; i++) {
+      connfd = fds[i].fd;
+      if (connfd < 0) continue ;
+
+      if (fds[i].revents & (POLLIN | POLLERR)) {
+        nread = io_readn(connfd, readbuff, sizeof(readbuff));
+        if ((nread < 0 && errno == ECONNRESET) || (nread == 0)) {
+          close(connfd);
+          fds[i].fd = -1;
+        }
+
+        // recv message
+        b_torrent *curr = bt;
+        while (curr != NULL) {
+          b_peer *curr_peer = curr->peer;
+          while (curr_peer != NULL) {
+            curr_peer = curr_peer->next;
+          }
+          curr = curr->next;
+        }
+      }
+
+      if (--nready <= 0)
+        continue ;
     }
 
   }

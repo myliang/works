@@ -27,7 +27,7 @@ int io_tcp_listen(const char *host, const char *serv) {
   //
   int listenfd, n;
   const int on = 1;
-  struct addrinfo hints, *res, **ressave;
+  struct addrinfo hints, *res, *ressave;
 
   bzero(&hints, sizeof(struct addrinfo));
   hints.ai_flags = AI_PASSIVE;
@@ -39,7 +39,7 @@ int io_tcp_listen(const char *host, const char *serv) {
     return -1;
   }
 
-  // ressave = res;
+  ressave = res;
   do {
     listenfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (listenfd < 0) continue ;
@@ -61,13 +61,15 @@ int io_tcp_listen(const char *host, const char *serv) {
     exit(0);
   }
 
+  freeaddrinfo(ressave);
+
   return listenfd;
 }
 
 // io connect
 static int io_connect(const char *ip, const short port, int family, int type) {
   int sockfd;
-  struct addrinfo hints, *res;
+  struct addrinfo hints, *res, *ressave;
 
   bzero(&hints, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;
@@ -81,6 +83,8 @@ static int io_connect(const char *ip, const short port, int family, int type) {
     fprintf(stderr, "%s:%d getaddrinfo<%s, %d> error: %s\n", __FILE__, __LINE__, ip, port, strerror(errno));
     return -1;
   }
+
+  ressave = res;
 
   do {
     // printf("protocol: %d\n", res->ai_protocol);
@@ -101,6 +105,8 @@ static int io_connect(const char *ip, const short port, int family, int type) {
     }
 
   } while ((res = res->ai_next) != NULL);
+
+  freeaddrinfo(ressave);
 
   return -1;
 }

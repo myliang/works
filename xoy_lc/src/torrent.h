@@ -47,6 +47,8 @@ typedef struct b_torrent{
   b_peer* peer;
   int peer_len;
 
+  struct b_torrent *next;
+
 } b_torrent;
 
 // init and print methods

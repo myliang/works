@@ -43,6 +43,8 @@
 #define BT_TORRENT_MAX_CONNECTIONS 10
 // 16K
 #define BT_PIECE_BLOCK_LEN 0x4000
+
+#define BT_PEER_WIRE_READBUFF_LEN 0x5000
 // protocol
 static char bittorrent_protocol[] = "BitTorrent protocol";
 
