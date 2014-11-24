@@ -14,6 +14,8 @@ typedef struct b_torrent_tracker{
 typedef struct b_torrent_file{
   uint64_t size;
   char* name;
+  uint64_t index;
+  uint32_t begin;
   struct b_torrent_file* next;
 } b_torrent_file;
 

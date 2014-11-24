@@ -4,8 +4,11 @@
 #include <sys/types.h>
 
 // sock tcp
-int io_tcp_connect(char *ip, short port);
-int io_udp_connect(char *ip, short port);
+int io_tcp_connect(const char *ip, const short port);
+int io_udp_connect(const char *ip, const short port);
+
+// sock tcp listen
+int io_tcp_listen(const char *host, const char *serv);
 
 // read and write
 ssize_t io_readn(int fd, void *vptr, size_t n);

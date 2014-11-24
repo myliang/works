@@ -14,17 +14,58 @@
 #include <errno.h>
 
 // io connect
-static int io_connect(char *ip, short port, int family, int type);
+static int io_connect(const char *ip, const short port, int family, int type);
 
-int io_tcp_connect(char *ip, short port) {
+int io_tcp_connect(const char *ip, const short port) {
   return io_connect(ip, port, AF_INET, SOCK_STREAM);
 }
-int io_udp_connect(char *ip, short port) {
+int io_udp_connect(const char *ip, const short port) {
   return io_connect(ip, port, AF_INET, SOCK_DGRAM);
 }
 
+int io_tcp_listen(const char *host, const char *serv) {
+  //
+  int listenfd, n;
+  const int on = 1;
+  struct addrinfo hints, *res, **ressave;
+
+  bzero(&hints, sizeof(struct addrinfo));
+  hints.ai_flags = AI_PASSIVE;
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+
+  if (getaddrinfo(host, serv, &hints, &res) != 0) {
+    fprintf(stderr, "%s:%d getaddrinfo<%s, %s> error: %s\n", __FILE__, __LINE__, host, serv, strerror(errno));
+    return -1;
+  }
+
+  // ressave = res;
+  do {
+    listenfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (listenfd < 0) continue ;
+
+    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+    if (bind(listenfd, res->ai_addr, res->ai_addrlen) == 0) break ;
+
+    close(listenfd);
+
+  } while ((res = res->ai_next) != NULL);
+
+  if (res == NULL) {
+    fprintf(stderr, "%s:%d listen error for %s, %s\n", __FILE__, __LINE__, host, serv);
+    exit(0);
+  }
+
+  if (listen(listenfd, 0) < 0) {
+    fprintf(stderr, "%s:%d listen error for %s, %s, error: %s", __FILE__, __LINE__, host, serv, strerror(errno));
+    exit(0);
+  }
+
+  return listenfd;
+}
+
 // io connect
-static int io_connect(char *ip, short port, int family, int type) {
+static int io_connect(const char *ip, const short port, int family, int type) {
   int sockfd;
   struct addrinfo hints, *res;
 

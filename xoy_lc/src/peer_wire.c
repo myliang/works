@@ -98,6 +98,8 @@ void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
       fprintf(stderr, "%s:%d poll eror %s\n", __FILE__, __LINE__, strerror(errno));
       break;
     }
+
+    //
   }
 }
 

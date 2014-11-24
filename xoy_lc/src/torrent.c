@@ -49,7 +49,16 @@ static b_torrent_file* malloc_file(char* str, int strlen, int64_t file_size);
 b_torrent* b_torrent_init(b_encode* bp) {
   b_torrent* tt = malloc(sizeof(b_torrent));
   _b_torrent_init(tt, bp);
+  // left
   tt->left = tt->total_size;
+  int begin = 0, len = strlen(tt->pieces);
+  len = len / 20 + (len % 20 > 0 ? len % 20 : 0);
+  tt->bitfield = bitmap_new(len);
+  // set file index begin
+  b_torrent_file* btf = tt->file;
+  while (btf != NULL) {
+    btf = btf->next;
+  }
   return tt;
 }
 
