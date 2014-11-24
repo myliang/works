@@ -38,7 +38,7 @@
   (buf)[0] = (v) & 0xff
 
 // bittorrent
-#define BT_LISTEN_PORT 6881
+#define BT_LISTEN_PORT "6881"
 // max connections num of torrent
 #define BT_TORRENT_MAX_CONNECTIONS 10
 // 16K

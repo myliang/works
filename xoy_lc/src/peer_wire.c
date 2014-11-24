@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <poll.h>
 #include <errno.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "config.h"
 #include "io.h"
@@ -80,7 +82,19 @@ static size_t message_cancel(char *dst, uint32_t index, uint32_t begin, uint32_t
 void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
   time_t now;
   struct pollfd fds[MAX_POLLFD];
-  int maxfd = MAX_POLLFD, nready = 0;
+  int maxfd = MAX_POLLFD, nready = 0, i, connfd;
+  socklen_t clilen;
+  struct sockaddr_in cliaddr;
+
+  int listenfd = io_tcp_listen("localhost", BT_LISTEN_PORT);
+  fds[0].fd = listenfd;
+  fds[0].events = POLLIN;
+
+  for (i = 1; i < MAX_POLLFD; i++) {
+    fds[i].fd = -1;
+  }
+
+  maxfd = 0;
 
   for (;;) {
     now = time(NULL);
@@ -92,7 +106,7 @@ void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
     // request tracker every 5 mintue
     //
     // create peer connction
-    nready = poll(fds, maxfd, timeout);
+    nready = poll(fds, maxfd + 1, timeout);
     if (nready == 0) continue;
     else if (nready < 0) {
       fprintf(stderr, "%s:%d poll eror %s\n", __FILE__, __LINE__, strerror(errno));
@@ -100,6 +114,13 @@ void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
     }
 
     //
+    if (fds[0].revents & POLLIN) {
+      clilen = sizeof(cliaddr);
+      connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &clilen);
+      if (connfd < 0) continue;
+      printf("%s:%d accept client.ip=%s, client.port=%d", __FILE__, __LINE__, inet_ntoa(cliaddr.sin_addr), cliaddr.sin_port);
+    }
+
   }
 }
 
