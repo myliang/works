@@ -13,6 +13,14 @@
 #define PEER_STATE_DATA 4
 #define PEER_STATE_CLOSE 5
 
+typedef struct b_peer_request {
+  uint32_t index;
+  uint32_t begin;
+  uint32_t length;
+
+  struct b_peer_request *next;
+} b_peer_request;
+
 typedef struct b_peer{
 
   char ip[16];
@@ -35,13 +43,20 @@ typedef struct b_peer{
 
   bitmap *bitfield;
 
+  b_peer_request *req;
+
   struct b_peer* next;
 
 } b_peer;
 
 b_peer* b_peer_init();
 b_peer* b_peer_init_by_ipport(const char* src);
-int16_t b_peer_contain(b_peer* head, b_peer* cur);
+b_peer* b_peer_init_by_ip_port(const char* ip, unsigned int port);
+b_peer* b_peer_has (const char *ip, unsigned int port, b_peer* head);
+b_peer* b_peer_contain(b_peer* head, b_peer* cur);
+void b_peer_add(b_peer* head, b_peer* cur);
 void b_peer_free(b_peer* p);
+
+b_peer_request *b_peer_request_add(b_peer_request *head, uint32_t index, uint32_t begin, uint32_t length);
 
 #endif /* end of include guard: _PEER_H_ */

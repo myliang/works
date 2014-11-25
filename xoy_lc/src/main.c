@@ -11,6 +11,7 @@
 #include "io_http.h"
 #include "tracker.h"
 #include "bitmap.h"
+#include "peer_wire.h"
 
 #include <time.h>
 
@@ -52,7 +53,7 @@ int main (int argc, char const* argv[]) {
   printf("cn.sizeof=%ld, cn.strlen=%lu\n", sizeof(cn), strlen(cn));
   // //
   // bitmap test
-  bitmap* bm = bitmap_init(2);
+  bitmap* bm = bitmap_new(2);
   printf("is seted count: %llu\n", (unsigned long long)bitmap_isseted_count(bm));
   printf("index == 9 value:%d\n", bitmap_get(bm, 9));
   bitmap_set(bm, 9);
@@ -65,6 +66,8 @@ int main (int argc, char const* argv[]) {
 
   // tracker
   request_trackers(btp, 100);
+
+  b_peer_wire_downup_message(btp, 1000);
 
   // peer
   b_torrent_print(btp);

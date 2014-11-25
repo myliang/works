@@ -106,7 +106,7 @@ static int request_trackers_with_http(const char* url, b_torrent* tptr, int time
       for (i = 0; i < bdict->value->len; i += 6) {
         // printf("%u.%u.%u.%u\n", (unsigned char)index[i + 0], (unsigned char)index[i + 1], (unsigned char)index[i + 2], (unsigned char)index[i + 3]);
         b_peer *bp1 = b_peer_init_by_ipport(index + i);
-        if (b_peer_contain(tptr->peer, bp1) == 0) {
+        if (b_peer_contain(tptr->peer, bp1) == NULL) {
           bpr = bpr->next = bp1;
           tptr->peer_len++;
         }
@@ -213,7 +213,7 @@ static int request_trackers_with_udp(const char* url, b_torrent* tptr, int timeo
           int2bytes4(begin + 80, STARTED);
           int2bytes4(begin + 84, 0x00);
           int2bytes8(begin + 88, (long long)0x00);
-          int2bytes2(begin + 96, LISTEN_PORT);
+          int2bytes2(begin + 96, atoi(BT_LISTEN_PORT));
           UDP_SEND(sockfd, buf1);
           break ;
         case 3:

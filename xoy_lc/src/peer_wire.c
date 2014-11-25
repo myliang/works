@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include <poll.h>
 #include <errno.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 
 #include "config.h"
@@ -49,7 +48,7 @@ static Function message_functions[] = {
 };
 
 // handshake : <pstrlen><pstr><reserved><info_hash><peer_id>
-static size_t message_handshake(char *dst, const char *info_hash, const char *peer_id);
+static size_t message_handshake(char *dst, const unsigned char *info_hash, const char *peer_id);
 // keep-alive: <len=0000>
 static size_t message_keepalive(char *dst);
 // choke: <len=0001><id=0>
@@ -78,10 +77,13 @@ static size_t message_cancel(char *dst, uint32_t index, uint32_t begin, uint32_t
 // port: <len=0003><id=9><listen-port>
 // size_t message_port(char *dst, uint16_t port);
 
+// global variable
+static b_peer* cache_peers[MAX_CONNECTIONS];
 
 void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
   time_t now;
   struct pollfd fds[MAX_POLLFD];
+  struct sockaddr_in clients[MAX_POLLFD]; // cache connection client ip and port
   int pollfdlen = MAX_POLLFD, nready = 0, i, connfd, nread = 0;
   socklen_t clilen;
   struct sockaddr_in cliaddr;
@@ -93,6 +95,10 @@ void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
 
   for (i = 1; i < MAX_POLLFD; i++) {
     fds[i].fd = -1;
+  }
+
+  for (i = 0; i < MAX_CONNECTIONS; i++) {
+    cache_peers[i] = NULL;
   }
 
   pollfdlen = 1;
@@ -118,12 +124,13 @@ void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
       clilen = sizeof(cliaddr);
       connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &clilen);
       if (connfd < 0) continue;
-      printf("%s:%d accept client.ip=%s, client.port=%d", __FILE__, __LINE__, inet_ntoa(cliaddr.sin_addr), cliaddr.sin_port);
+      printf("%s:%d accept client.ip=%s, client.port=%d\n", __FILE__, __LINE__, inet_ntoa(cliaddr.sin_addr), cliaddr.sin_port);
 
       for (i = 1; i < MAX_POLLFD; i++) {
         if (fds[i].fd < 0) {
           fds[i].fd = connfd;
           fds[i].events = POLLIN;
+          memcpy(&clients[i], &cliaddr, clilen);
           break ;
         }
       }
@@ -149,21 +156,19 @@ void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
         if ((nread < 0 && errno == ECONNRESET) || (nread == 0)) {
           close(connfd);
           fds[i].fd = -1;
+          bzero(&clients[i], sizeof(struct sockaddr_in));
         }
 
         // recv message
-        b_torrent *curr = bt;
-        while (curr != NULL) {
-          b_peer *curr_peer = curr->peer;
-          while (curr_peer != NULL) {
-            curr_peer = curr_peer->next;
-          }
-          curr = curr->next;
-        }
+        b_peer_wire_recv_message(readbuff, bt, connfd, &clients[i]);
+
       }
 
       if (--nready <= 0)
         continue ;
+    }
+
+    if (fds[i].revents & (POLLOUT | POLLWRNORM)) {
     }
 
   }
@@ -223,13 +228,33 @@ int b_peer_wire_send_message(b_peer* bp, b_torrent *bt) {
   return 0;
 }
 
-int b_peer_wire_recv_message(b_peer* bp, const char *buf, b_torrent *bt) {
+int b_peer_wire_recv_message(const char *buf, b_torrent *bt, int sockfd, struct sockaddr_in *client) {
+  b_peer *bp = NULL;
+  b_torrent *curr = bt;
+
+  // hand shake message
   if (buf[0] == 19 && strncmp(buf + 1, bittorrent_protocol, 19) == 0) {
-    return mrecv_handshake(buf, bp, bt);
-  } else if (bytes42int(buf) == 0) {
-    return mrecv_keepalive(buf, bp, bt);
-  } else if (message_functions[buf[4]] != NULL) {
-    return message_functions[buf[4]](buf, bp, bt);
+    while (curr != NULL) {
+      if (strncmp(buf + 20, curr->info_hash, 20) == 0) {
+        char *ip = inet_ntoa(client->sin_addr);
+        bp = b_peer_has(ip, client->sin_port, curr->peer);
+        if (bp == NULL) {
+          bp = b_peer_init_by_ip_port(ip, client->sin_port);
+          b_peer_add(curr->peer, bp);
+        }
+        bp->sockfd = sockfd;
+        cache_peers[sockfd] = bp;
+        return mrecv_handshake(buf, bp, bt);
+      }
+      curr = curr->next;
+    }
+
+    printf("%s:%d torrent don't exists", __FILE__, __LINE__);
+    close(sockfd);
+  } else if (bytes42int(buf) == 0 && cache_peers[sockfd] != NULL) {
+    return mrecv_keepalive(buf, cache_peers[sockfd], bt);
+  } else if (message_functions[buf[4]] != NULL && cache_peers[sockfd] != NULL) {
+    return message_functions[buf[4]](buf, cache_peers[sockfd], bt);
   } else {
     fprintf(stderr, "recv message error\n");
     return -1;
@@ -240,11 +265,11 @@ int b_peer_wire_recv_message(b_peer* bp, const char *buf, b_torrent *bt) {
 
 // message recv
 static int mrecv_handshake(const char *buf, b_peer *bp, b_torrent *bt) {
-  if (strncmp(buf + 20, bt->info_hash, 20) != 0) {
-    bp->state = PEER_STATE_CLOSE;
-    close(bp->sockfd);
-    return 68;
-  }
+  // if (strncmp(buf + 20, bt->info_hash, 20) != 0) {
+  //   bp->state = PEER_STATE_CLOSE;
+  //   close(bp->sockfd);
+  //   return 68;
+  // }
 
   char sendbuf[100];
   size_t len;
@@ -264,7 +289,7 @@ static int mrecv_keepalive(const char *buf, b_peer *bp, b_torrent *bt) {
 static int mrecv_choke(const char *buf, b_peer *bp, b_torrent *bt) {
   if (bp->state == PEER_STATE_DATA && bp->peer_choking == 0) {
     bp->peer_choking = 1;
-    bp->last_recvtime = 0;
+    // bp->last_recvtime = 0;
     bp->downloaded = 0;
   }
   UPDATE_LAST_TIME(bp);
@@ -283,7 +308,7 @@ static int mrecv_unchoke(const char *buf, b_peer *bp, b_torrent *bt) {
     }
 
     if (bp->am_interested == 1) { /** todo **/  }
-    bp->last_recvtime = 0;
+    // bp->last_recvtime = 0;
     bp->downloaded = 0;
   }
   UPDATE_LAST_TIME(bp);
@@ -384,15 +409,21 @@ static int mrecv_bitfield(const char *buf, b_peer *bp, b_torrent *bt) {
 }
 static int mrecv_request(const char *buf, b_peer *bp, b_torrent *bt) {
   // todo reqeust quene
+  if (bp->am_choking == 0 && bp->peer_interested == 1) {
+    uint32_t index = bytes42int(buf + 5);
+    uint32_t begin = bytes42int(buf + 9);
+    uint32_t length = bytes42int(buf + 13);
+    bp->req = b_peer_request_add(bp->req, index, begin, length);
+  }
   UPDATE_LAST_TIME(bp);
   return 17;
 }
 static int mrecv_piece(const char *buf, b_peer *bp, b_torrent *bt) {
-  // todo
   if (bp->am_choking == 0 && bp->peer_interested == 1) {
     uint32_t index = bytes42int(buf + 5);
     uint32_t begin = bytes42int(buf + 9);
-    uint32_t length = bytes42int(buf + 1333);
+    uint32_t length = bytes42int(buf) - 0x09;
+
     //
     if (bp->last_downtime == 0) bp->last_downtime = time(NULL);
     bp->downloaded += length;
@@ -410,7 +441,7 @@ static int mrecv_cancel(const char *buf, b_peer *bp, b_torrent *bt) {
 }
 
 // static methods
-static size_t message_handshake(char *dst, const char *info_hash, const char *peer_id)  {
+static size_t message_handshake(char *dst, const unsigned char *info_hash, const char *peer_id)  {
   dst[0] = sizeof(bittorrent_protocol) - 1;
   memcpy(dst + 1, bittorrent_protocol, sizeof(bittorrent_protocol) - 1);
   memcpy(dst + 20, "00000000", 8);

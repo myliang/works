@@ -37,6 +37,9 @@
 #define int2byte(buf, v) \
   (buf)[0] = (v) & 0xff
 
+// max connections size
+#define MAX_CONNECTIONS 1024
+
 // bittorrent
 #define BT_LISTEN_PORT "6881"
 // max connections num of torrent

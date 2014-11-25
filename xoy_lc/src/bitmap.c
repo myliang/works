@@ -7,7 +7,7 @@
 #define BYTE_BITS 8
 #define BIT_MASK 0x01
 #define ARRAY_SIZE(ints, type) sizeof(ints)/sizeof(type)
-#define BYTE_BIT_INDEX(index) {index/BYTE_BITS, index%BYTE_BITS};
+#define BYTE_BIT_INDEX(index) {index/BYTE_BITS, index%BYTE_BITS}
 
 static int bit_masks[] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
 
