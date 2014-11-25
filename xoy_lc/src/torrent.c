@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/types.h>
+#include <fcntl.h>
 
 #include "sha1.h"
 #include "torrent.h"
@@ -45,6 +46,7 @@ static b_torrent_tracker* malloc_tracker(char* src, int len);
 static char* malloc_string(char* src, int len);
 static void _b_torrent_init(b_torrent* tt, b_encode* bp);
 static b_torrent_file* malloc_file(char* str, int strlen, int64_t file_size);
+static b_torrent_file* fd_file(b_peer_request *req, b_torrent *bt);
 
 b_torrent* b_torrent_init(b_encode* bp) {
   b_torrent* tt = malloc(sizeof(b_torrent));
@@ -203,6 +205,41 @@ b_torrent* b_torrent_recover(const char* filename) {
   bt->file = fhead.next;
   fclose(fp);
   return bt;
+}
+
+
+void b_torrent_file_read(b_peer_request *req, char *dst, b_torrent *bt) {
+  b_torrent_file *current = fd_file(req, bt);
+}
+
+void b_torrent_file_write(b_peer_request *req, char *src, b_torrent *bt) {
+  b_torrent_file *current = fd_file(req, bt);
+}
+
+static b_torrent_file* fd_file(b_peer_request *req, b_torrent *bt) {
+  b_torrent_file *tmp = bt->file;
+  while (tmp != NULL) {
+    if (tmp->index <= req->index) {
+      if (tmp->next == NULL)
+        break ;
+      else if (tmp->next->index > req->index)
+        break ;
+
+    }
+    tmp = tmp->next;
+  }
+
+  if (tmp->fd <= 0) {
+    int len1 = strlen(bt->file_path);
+    int len2 = strlen(tmp->name);
+    char path[len1 + len2 + 2];
+    strcpy(path, bt->file_path);
+    strcpy(path + len1, "/");
+    strcpy(path + len1 + 1, tmp->name);
+    tmp->fd = open(path, O_RDWR|O_CREAT);
+  }
+
+  return tmp;
 }
 
 static void _b_torrent_init (b_torrent* tt, b_encode* bp) {

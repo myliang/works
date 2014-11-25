@@ -87,7 +87,7 @@ void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
   int pollfdlen = MAX_POLLFD, nready = 0, i, connfd, nread = 0;
   socklen_t clilen;
   struct sockaddr_in cliaddr;
-  char readbuff[BT_PEER_WIRE_READBUFF_LEN];
+  char readbuff[BT_PEER_WIRE_BUFFER_LEN];
 
   int listenfd = io_tcp_listen("localhost", BT_LISTEN_PORT);
   fds[0].fd = listenfd;
@@ -169,6 +169,7 @@ void b_peer_wire_downup_message(b_torrent *bt, int timeout) {
     }
 
     if (fds[i].revents & (POLLOUT | POLLWRNORM)) {
+      b_peer_wire_send_message(cache_peers[connfd], bt);
     }
 
   }
@@ -210,9 +211,18 @@ int b_peer_wire_send_message(b_peer* bp, b_torrent *bt) {
     bp->state = PEER_STATE_SEND_BITFIELD;
   }
 
-  // if recv
-  if (bp->am_choking == 0) {
-    // upload
+  // upload data
+  if (bp->am_choking == 0 && bp->peer_interested == 1) {
+    b_peer_request *req = bp->req;
+    char dst[BT_PEER_WIRE_BUFFER_LEN];
+    while (req != NULL) {
+      // read data to remote client from disk
+      char block[req->length];
+      b_torrent_file_read(req->index, req->begin, req->length, block);
+      len = message_piece(dst, req->index, req->begin, block);
+      io_writen(bp->sockfd, dst, len);
+      req = req->next;
+    }
   }
 
   time_t now = time(NULL);
