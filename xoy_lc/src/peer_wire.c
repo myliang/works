@@ -218,7 +218,7 @@ int b_peer_wire_send_message(b_peer* bp, b_torrent *bt) {
     while (req != NULL) {
       // read data to remote client from disk
       char block[req->length];
-      b_torrent_file_read(req->index, req->begin, req->length, block);
+      b_torrent_file_read(req, block, bt);
       len = message_piece(dst, req->index, req->begin, block);
       io_writen(bp->sockfd, dst, len);
       req = req->next;
