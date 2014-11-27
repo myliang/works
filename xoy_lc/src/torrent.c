@@ -4,10 +4,13 @@
 #include <time.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
 
 #include "sha1.h"
 #include "torrent.h"
 #include "config.h"
+#include "io.h"
 
 #define DEBUG
 
@@ -46,7 +49,6 @@ static b_torrent_tracker* malloc_tracker(char* src, int len);
 static char* malloc_string(char* src, int len);
 static void _b_torrent_init(b_torrent* tt, b_encode* bp);
 static b_torrent_file* malloc_file(char* str, int strlen, int64_t file_size);
-static b_torrent_file* fd_file(b_peer_request *req, b_torrent *bt);
 
 b_torrent* b_torrent_init(b_encode* bp) {
   b_torrent* tt = malloc(sizeof(b_torrent));
@@ -107,6 +109,19 @@ void b_torrent_print(b_torrent* btp) {
   }
 }
 
+void b_torrent_store_all(b_peer *bp, b_torrent *bt) {
+  int slices_len = division_up(bt->piece_size, BT_PIECE_BLOCK_LEN);
+  if (bp->res_len <= 0) return ;
+
+  int piece_index = bp->res->index;
+  int last_piece_silices_len = 1;
+  // no complete
+  if (bt->bitfield->len > piece_index && bp->res_len >= slices_len) {
+
+  } else if (bt->bitfield->len == piece_index && bp->res_len == last_piece_silices_len) {
+
+  }
+}
 void b_torrent_store(const char* filename, b_torrent* bt) {
   FILE* fp = fopen(filename, "wb");
   if (fp == NULL) {
@@ -207,39 +222,43 @@ b_torrent* b_torrent_recover(const char* filename) {
   return bt;
 }
 
+#define FILE_STORE_FUNC_BEGIN(r, bt) \
+  b_torrent_file *tmp = bt->file; \
+  while (tmp != NULL) { \
+    if (tmp->index <= r->index) { \
+      if (tmp->next == NULL) \
+        break ; \
+      else if (tmp->next->index > r->index) \
+        break ; \
+    } \
+    tmp = tmp->next; \
+  } \
+  if (tmp->fd <= 0) { \
+    int len1 = strlen(bt->file_path); \
+    int len2 = strlen(tmp->name); \
+    char path[len1 + len2 + 2]; \
+    strcpy(path, bt->file_path); \
+    strcpy(path + len1, "/"); \
+    strcpy(path + len1 + 1, tmp->name); \
+    tmp->fd = open(path, O_RDWR|O_CREAT); \
+  } \
+  if (tmp != NULL && tmp->fd > 0) { \
+    uint64_t index = (uint64_t)r->index * bt->bitfield->len + r->begin; \
+    if (lseek(tmp->fd, index, SEEK_SET) < 0) { \
+      fprintf(stderr, "%s:%d lseek error %s", __FILE__, __LINE__, strerror(errno)); \
+      return ; \
+    } \
 
 void b_torrent_file_read(b_peer_request *req, char *dst, b_torrent *bt) {
-  b_torrent_file *current = fd_file(req, bt);
+  FILE_STORE_FUNC_BEGIN(req, bt);
+    io_readn(tmp->fd, dst, req->length);
+  }
 }
 
-void b_torrent_file_write(b_peer_request *req, char *src, b_torrent *bt) {
-  b_torrent_file *current = fd_file(req, bt);
-}
-
-static b_torrent_file* fd_file(b_peer_request *req, b_torrent *bt) {
-  b_torrent_file *tmp = bt->file;
-  while (tmp != NULL) {
-    if (tmp->index <= req->index) {
-      if (tmp->next == NULL)
-        break ;
-      else if (tmp->next->index > req->index)
-        break ;
-
-    }
-    tmp = tmp->next;
+void b_torrent_file_write(b_peer_response *res, b_torrent *bt) {
+  FILE_STORE_FUNC_BEGIN(res, bt);
+    io_writen(tmp->fd, res->block, res->length);
   }
-
-  if (tmp->fd <= 0) {
-    int len1 = strlen(bt->file_path);
-    int len2 = strlen(tmp->name);
-    char path[len1 + len2 + 2];
-    strcpy(path, bt->file_path);
-    strcpy(path + len1, "/");
-    strcpy(path + len1 + 1, tmp->name);
-    tmp->fd = open(path, O_RDWR|O_CREAT);
-  }
-
-  return tmp;
 }
 
 static void _b_torrent_init (b_torrent* tt, b_encode* bp) {

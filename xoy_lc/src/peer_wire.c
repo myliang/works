@@ -429,21 +429,23 @@ static int mrecv_request(const char *buf, b_peer *bp, b_torrent *bt) {
   return 17;
 }
 static int mrecv_piece(const char *buf, b_peer *bp, b_torrent *bt) {
+  uint32_t length = bytes42int(buf) - 0x09;
+
   if (bp->am_choking == 0 && bp->peer_interested == 1) {
     uint32_t index = bytes42int(buf + 5);
     uint32_t begin = bytes42int(buf + 9);
-    uint32_t length = bytes42int(buf) - 0x09;
 
-    //
+    bp->res = b_peer_response_add(bp->res, index, begin, length, buf + 13);
+
     if (bp->last_downtime == 0) bp->last_downtime = time(NULL);
     bp->downloaded += length;
 
-    // wirte buff
-    // continue request
+    // write disk from res
+    b_torrent_store_all(bp, bt);
   }
 
   UPDATE_LAST_TIME(bp);
-  return 13;
+  return length + 13;
 }
 static int mrecv_cancel(const char *buf, b_peer *bp, b_torrent *bt) {
   UPDATE_LAST_TIME(bp);

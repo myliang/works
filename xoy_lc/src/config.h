@@ -8,6 +8,9 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
+#define division_up(a, b) \
+  ((a) / (b) + ((a) % (b) > 0 ? 1 : 0))
+
 #define bytes42int(buf) \
   (((buf)[0] << 24 & 0xffffffff) + ((buf)[1] << 16 & 0xffffff) + ((buf)[2] << 8 & 0xffff) + ((buf)[3] & 0xff))
 

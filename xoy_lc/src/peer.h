@@ -13,13 +13,21 @@
 #define PEER_STATE_DATA 4
 #define PEER_STATE_CLOSE 5
 
-typedef struct b_peer_request {
-  uint32_t index;
-  uint32_t begin;
-  uint32_t length;
+#define PIECE_SLICE_BASE \
+  uint32_t index; \
+  uint32_t begin; \
+  uint32_t length \
 
+typedef struct b_peer_request {
+  PIECE_SLICE_BASE;
   struct b_peer_request *next;
 } b_peer_request;
+
+typedef struct b_peer_response {
+  PIECE_SLICE_BASE;
+  const char *block;
+  struct b_peer_response *next;
+} b_peer_response;
 
 typedef struct b_peer{
 
@@ -44,6 +52,8 @@ typedef struct b_peer{
   bitmap *bitfield;
 
   b_peer_request *req;
+  b_peer_response *res;
+  unsigned int res_len;
 
   struct b_peer* next;
 
@@ -58,5 +68,6 @@ void b_peer_add(b_peer* head, b_peer* cur);
 void b_peer_free(b_peer* p);
 
 b_peer_request *b_peer_request_add(b_peer_request *head, uint32_t index, uint32_t begin, uint32_t length);
+b_peer_response *b_peer_response_add(b_peer_response *head, uint32_t index, uint32_t begin, uint32_t length, const char *block);
 
 #endif /* end of include guard: _PEER_H_ */

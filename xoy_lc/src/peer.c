@@ -26,6 +26,8 @@ b_peer* b_peer_init () {
   p->uploaded = 0;
   p->downloaded = 0;
 
+  p->res_len = 0;
+
   return p;
 }
 
@@ -73,26 +75,34 @@ void b_peer_free(b_peer* p) {
   free(p);
 }
 
+#define PIECE_SLICE_ADDFUNC_BEGIN(type) \
+  type *tmp = head; \
+  type *tail = head; \
+  type *curr = malloc(sizeof(struct type)); \
+  curr->index = index; \
+  curr->begin = begin; \
+  curr->length = length; \
+
+#define PIECE_SLICE_ADDFUNC_END \
+    tail = tmp; \
+    tmp = tmp->next; \
+  } \
+  if (tail == NULL) head = curr; \
+  else tail->next = curr; \
+
 b_peer_request *b_peer_request_add(b_peer_request *head, uint32_t index, uint32_t begin, uint32_t length) {
-  b_peer_request *tmp = head;
-  b_peer_request *tail = head;
-  b_peer_request *curr = malloc(sizeof(struct b_peer_request));
-
-  curr->index = index;
-  curr->begin = begin;
-  curr->length = length;
-
+  PIECE_SLICE_ADDFUNC_BEGIN(b_peer_request);
   while (tmp != NULL) {
     // if contain request
     if (tmp->index == index && tmp->begin == begin && tmp->length == length)
       return head;
-
-    tail = tmp;
-    tmp = tmp->next;
-  }
-
-  if (tail == NULL) head = curr;
-  else tail->next = curr;
-
+  PIECE_SLICE_ADDFUNC_END;
   return head;
+}
+
+b_peer_response *b_peer_response_add(b_peer_response *head, uint32_t index, uint32_t begin, uint32_t length, const char *block) {
+  PIECE_SLICE_ADDFUNC_BEGIN(b_peer_response);
+  curr->block = block;
+  while (tmp != NULL) {
+  PIECE_SLICE_ADDFUNC_END;
 }

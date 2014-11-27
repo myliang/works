@@ -59,13 +59,16 @@ typedef struct b_torrent{
 b_torrent* b_torrent_init(b_encode* bp);
 void b_torrent_print(b_torrent* btp);
 
+// store torrent struct information and file data
+void b_torrent_store_all(b_peer *bp, b_torrent *bt);
+
 // store and recover methods
 void b_torrent_store(const char* filename, b_torrent* bt);
 b_torrent* b_torrent_recover(const char* filename);
 
 // store real data file
 void b_torrent_file_read(b_peer_request *req, char *dst, b_torrent *bt);
-void b_torrent_file_write(b_peer_request *req, char *src, b_torrent *bt);
+void b_torrent_file_write(b_peer_response *res, b_torrent *bt);
 
 #endif /* end of include guard: _TORRENT_H_ */
 
