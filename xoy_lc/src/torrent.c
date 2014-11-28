@@ -45,6 +45,15 @@
   fread(&len, 4, 1, fp); \
   fread(&k, len, 1, fp)
 
+#define TORRENT_FILE_PATH_CONCAT(size, src, p1, p2) \
+  char ffpath[size]; \
+  strcpy(ffpath, src); \
+  strcpy(ffpath + strlen(ffpath), "/"); \
+  strcpy(ffpath + strlen(ffpath) + 1, p1); \
+  strcpy(ffpath + strlen(ffpath), "/"); \
+  strcpy(ffpath + strlen(ffpath) + 1, p2); \
+
+
 static b_torrent_tracker* malloc_tracker(char* src, int len);
 static char* malloc_string(char* src, int len);
 static void _b_torrent_init(b_torrent* tt, b_encode* bp);
@@ -113,13 +122,25 @@ void b_torrent_store_all(b_peer *bp, b_torrent *bt) {
   int slices_len = division_up(bt->piece_size, BT_PIECE_BLOCK_LEN);
   if (bp->res_len <= 0) return ;
 
-  int piece_index = bp->res->index;
-  int last_piece_silices_len = 1;
-  // no complete
+  int is_write = 0;
+  b_peer_response *res =  bp->res;
+  int piece_index = res->index;
+  int last_piece_slices_len = bt->total_size % bt->piece_size;
+  last_piece_slices_len = division_up(last_piece_slices_len, BT_PIECE_BLOCK_LEN);
+
   if (bt->bitfield->len > piece_index && bp->res_len >= slices_len) {
+    is_write = 1;
+  } else if (bt->bitfield->len == piece_index && bp->res_len == last_piece_slices_len) {
+    is_write = 1;
+  }
 
-  } else if (bt->bitfield->len == piece_index && bp->res_len == last_piece_silices_len) {
-
+  if (is_write == 1){
+    while (res != NULL && piece_index == res->index) {
+      b_torrent_file_write(res, bt);
+      res = res->next;
+    }
+    TORRENT_FILE_PATH_CONCAT(1024, bt->file_path, bt->name, "tmp.bin");
+    b_torrent_store(ffpath, bt);
   }
 }
 void b_torrent_store(const char* filename, b_torrent* bt) {
@@ -234,13 +255,8 @@ b_torrent* b_torrent_recover(const char* filename) {
     tmp = tmp->next; \
   } \
   if (tmp->fd <= 0) { \
-    int len1 = strlen(bt->file_path); \
-    int len2 = strlen(tmp->name); \
-    char path[len1 + len2 + 2]; \
-    strcpy(path, bt->file_path); \
-    strcpy(path + len1, "/"); \
-    strcpy(path + len1 + 1, tmp->name); \
-    tmp->fd = open(path, O_RDWR|O_CREAT); \
+    TORRENT_FILE_PATH_CONCAT(1024, bt->file_path, bt->name, tmp->name); \
+    tmp->fd = open(ffpath, O_RDWR|O_CREAT); \
   } \
   if (tmp != NULL && tmp->fd > 0) { \
     uint64_t index = (uint64_t)r->index * bt->bitfield->len + r->begin; \
