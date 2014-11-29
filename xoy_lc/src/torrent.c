@@ -243,38 +243,36 @@ b_torrent* b_torrent_recover(const char* filename) {
   return bt;
 }
 
-#define FILE_STORE_FUNC_BEGIN(r, bt) \
+#define FILE_STORE_FUNC_BEGIN(r, bt, r_w, _content) \
   b_torrent_file *tmp = bt->file; \
+  int _len = r->length; \
   while (tmp != NULL) { \
     if (tmp->index <= r->index) { \
-      if (tmp->next == NULL) \
-        break ; \
-      else if (tmp->next->index > r->index) \
-        break ; \
+      if (tmp->next == NULL || tmp->next->index >= r->index) { \
+        if (tmp->fd <= 0) { \
+          TORRENT_FILE_PATH_CONCAT(1024, bt->file_path, bt->name, tmp->name); \
+          tmp->fd = open(ffpath, O_RDWR|O_CREAT); \
+        } \
+        if (tmp->fd > 0) { \
+          uint64_t index = (r->index - tmp->index) * bt->piece_size + (r->begin - tmp->begin); \
+          if (lseek(tmp->fd, index, SEEK_SET) < 0) { \
+            fprintf(stderr, "%s:%d lseek error %s", __FILE__, __LINE__, strerror(errno)); \
+            return ; \
+          } \
+          r_w(tmp->fd, _content + (r->length - _len), _len); \
+          _len = index + _len - tmp->size; \
+        } \
+      } \
     } \
     tmp = tmp->next; \
   } \
-  if (tmp->fd <= 0) { \
-    TORRENT_FILE_PATH_CONCAT(1024, bt->file_path, bt->name, tmp->name); \
-    tmp->fd = open(ffpath, O_RDWR|O_CREAT); \
-  } \
-  if (tmp != NULL && tmp->fd > 0) { \
-    uint64_t index = (uint64_t)r->index * bt->bitfield->len + r->begin; \
-    if (lseek(tmp->fd, index, SEEK_SET) < 0) { \
-      fprintf(stderr, "%s:%d lseek error %s", __FILE__, __LINE__, strerror(errno)); \
-      return ; \
-    } \
 
 void b_torrent_file_read(b_peer_request *req, char *dst, b_torrent *bt) {
-  FILE_STORE_FUNC_BEGIN(req, bt);
-    io_readn(tmp->fd, dst, req->length);
-  }
+  FILE_STORE_FUNC_BEGIN(req, bt, io_readn, dst);
 }
 
 void b_torrent_file_write(b_peer_response *res, b_torrent *bt) {
-  FILE_STORE_FUNC_BEGIN(res, bt);
-    io_writen(tmp->fd, res->block, res->length);
-  }
+  FILE_STORE_FUNC_BEGIN(res, bt, io_writen, res->block);
 }
 
 static void _b_torrent_init (b_torrent* tt, b_encode* bp) {
