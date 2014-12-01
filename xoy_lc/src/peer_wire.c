@@ -275,16 +275,11 @@ int b_peer_wire_recv_message(const char *buf, b_torrent *bt, int sockfd, struct 
 
 // message recv
 static int mrecv_handshake(const char *buf, b_peer *bp, b_torrent *bt) {
-  // if (strncmp(buf + 20, bt->info_hash, 20) != 0) {
-  //   bp->state = PEER_STATE_CLOSE;
-  //   close(bp->sockfd);
-  //   return 68;
-  // }
-
   char sendbuf[100];
   size_t len;
   memcpy(bp->id, buf + 48, 20);
   if (bp->state == PEER_STATE_INIT) {
+    // send handshake
     len = message_handshake(sendbuf, bt->info_hash, bt->peer_id);
     if (io_writen(bp->sockfd, sendbuf, len) < 0) return 68;
   }
