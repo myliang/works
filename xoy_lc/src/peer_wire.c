@@ -199,22 +199,16 @@ void b_peer_wire_message(b_torrent *bt) {
 
 int b_peer_wire_send_message(b_peer* bp, b_torrent *bt) {
   if (bp == NULL) return -1;
-  char buf[100];
   size_t len;
-  if (bp->state == PEER_STATE_INIT) {
-    len = message_handshake(buf, bt->info_hash, bt->peer_id);
-    bp->state = PEER_STATE_SEND_HANDSHAKED;
-  }
+  char dst[BT_PEER_WIRE_BUFFER_LEN];
 
-  if (bp->state == PEER_STATE_RECV_HANDSHAKED) {
-    len = message_bitfield(buf, bt->bitfield);
-    bp->state = PEER_STATE_SEND_BITFIELD;
+  // send request
+  if (bp->state == PEER_STATE_DATA && bp->peer_choking == 0 && bp->am_interested == 1) {
+    //
   }
-
-  // upload data
-  if (bp->am_choking == 0 && bp->peer_interested == 1) {
+  // send piece (upload data)
+  if (bp->state == PEER_STATE_DATA && bp->am_choking == 0 && bp->peer_interested == 1) {
     b_peer_request *req = bp->req;
-    char dst[BT_PEER_WIRE_BUFFER_LEN];
     while (req != NULL) {
       // read data to remote client from disk
       char block[req->length];
@@ -230,9 +224,10 @@ int b_peer_wire_send_message(b_peer* bp, b_torrent *bt) {
   if (interval > 180) {
     bp->state = PEER_STATE_CLOSE;
     close(bp->sockfd);
+    bp->sockfd = -1;
   } else if(interval > 45) {
-    len = message_keepalive(buf);
-    io_writen(bp->sockfd, buf, len);
+    len = message_keepalive(dst);
+    io_writen(bp->sockfd, dst, len);
   }
 
   return 0;
@@ -275,15 +270,21 @@ int b_peer_wire_recv_message(const char *buf, b_torrent *bt, int sockfd, struct 
 
 // message recv
 static int mrecv_handshake(const char *buf, b_peer *bp, b_torrent *bt) {
-  char sendbuf[100];
+  char sendbuf[bt->bitfield->len + 5];
   size_t len;
   memcpy(bp->id, buf + 48, 20);
+
+  bp->state = PEER_STATE_RECV_HANDSHAKED;
   if (bp->state == PEER_STATE_INIT) {
     // send handshake
     len = message_handshake(sendbuf, bt->info_hash, bt->peer_id);
     if (io_writen(bp->sockfd, sendbuf, len) < 0) return 68;
+    // send bitfield
+    len = message_bitfield(sendbuf, bt->bitfield);
+    if (io_writen(bp->sockfd, sendbuf, len) < 0) return 68;
+
+    bp->state = PEER_STATE_SEND_BITFIELD;
   }
-  bp->state = PEER_STATE_RECV_HANDSHAKED;
   UPDATE_LAST_TIME(bp);
   return 68;
 }
@@ -294,7 +295,7 @@ static int mrecv_keepalive(const char *buf, b_peer *bp, b_torrent *bt) {
 static int mrecv_choke(const char *buf, b_peer *bp, b_torrent *bt) {
   if (bp->state == PEER_STATE_DATA && bp->peer_choking == 0) {
     bp->peer_choking = 1;
-    // bp->last_recvtime = 0;
+    bp->last_downtime = 0;
     bp->downloaded = 0;
   }
   UPDATE_LAST_TIME(bp);
@@ -312,8 +313,7 @@ static int mrecv_unchoke(const char *buf, b_peer *bp, b_torrent *bt) {
         printf("Received unchoke but Not interested to IP:%s\n", bp->ip);
     }
 
-    if (bp->am_interested == 1) { /** todo **/  }
-    // bp->last_recvtime = 0;
+    bp->last_downtime = 0;
     bp->downloaded = 0;
   }
   UPDATE_LAST_TIME(bp);
@@ -377,15 +377,16 @@ static int mrecv_bitfield(const char *buf, b_peer *bp, b_torrent *bt) {
   int len;
 
   if (bp->state == PEER_STATE_RECV_HANDSHAKED || bp->state == PEER_STATE_SEND_BITFIELD) {
-    if (bp->bitfield != NULL) {
-      bitmap_free(bp->bitfield);
-      bp->bitfield = NULL;
-    }
-
     if (bytes42int(buf) - 1 != bitlen) {
       bp->state = PEER_STATE_CLOSE;
       close(bp->sockfd);
+      bp->sockfd = -1;
       return 5 + bitlen;
+    }
+
+    if (bp->bitfield != NULL) {
+      bitmap_free(bp->bitfield);
+      bp->bitfield = NULL;
     }
 
     bp->bitfield = bitmap_init(buf + 5, bitlen);
@@ -394,10 +395,8 @@ static int mrecv_bitfield(const char *buf, b_peer *bp, b_torrent *bt) {
     if (bp->state == PEER_STATE_RECV_HANDSHAKED) {
       len = message_bitfield(sendbuf, bt->bitfield);
       io_writen(bp->sockfd, sendbuf, len);
-      // bp->state = PEER_STATE_DATA;
     }
 
-    // if (bp->state == PEER_STATE_SEND_BITFIELD)
     bp->state = PEER_STATE_DATA;
 
     // interested
@@ -410,7 +409,7 @@ static int mrecv_bitfield(const char *buf, b_peer *bp, b_torrent *bt) {
     if (ret[1] > 0) bp->peer_interested = 1;
   }
   UPDATE_LAST_TIME(bp);
-  return 5 + len;
+  return 5 + bitlen;
 }
 static int mrecv_request(const char *buf, b_peer *bp, b_torrent *bt) {
   // todo reqeust quene

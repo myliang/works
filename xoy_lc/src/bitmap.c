@@ -83,7 +83,7 @@ void bitmap_compare(int ret[], bitmap* bm1, bitmap* bm2) {
       int r1 = bm1->buf[i] & bit_masks[j];
       int r2 = bm2->buf[i] & bit_masks[j];
       if (r1 == r2) continue ;
-      if (r1 == 1) ret[0]++;
+      if (r1 > 0) ret[0]++;
       else ret[1]++;
     }
   }
